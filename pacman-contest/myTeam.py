@@ -22,7 +22,7 @@ import game
 #################
 
 def createTeam(firstIndex, secondIndex, isRed,
-               first = 'DummyAgent', second = 'DummyAgent'):
+               first = 'WaStarInvader', second = 'WaStarDefender'):
     """
     This function should return a list of two agents that will form the
     team, initialized using firstIndex and secondIndex as their agent
@@ -46,6 +46,7 @@ def createTeam(firstIndex, secondIndex, isRed,
 ##########
 
 class DummyAgent(CaptureAgent):
+    
     """
     A Dummy agent to serve as an example of the necessary agent structure.
     You should look at baselineTeam.py for more details about how to
@@ -53,6 +54,8 @@ class DummyAgent(CaptureAgent):
     """
     
     mode = ""
+    # invader starting mode, invader hunting mode, invader power mode
+    # defender TODO
     
     def registerInitialState(self, gameState):
         """
@@ -66,7 +69,6 @@ class DummyAgent(CaptureAgent):
     
         IMPORTANT: This method may run for at most 15 seconds.
         """
-        
         '''
         Make sure you do not delete the following line. If you would like to
         use Manhattan distances instead of maze distances in order to save
@@ -75,27 +77,14 @@ class DummyAgent(CaptureAgent):
         '''
         self.start = gameState.getAgentPosition(self.index)
         CaptureAgent.registerInitialState(self, gameState)
-        
         '''
         Your initialization code goes here, if you need any.
         '''
     
-    
     def chooseAction(self, gameState):
-        """
-        Picks among actions randomly.
-        This part implements the chosen algorithm acutually  -- tech 1: heuristic search wastar
-        """
-        # chosen from ['North', 'South', 'West', 'East', 'Stop']
-
-        closestFood, distance = self.closestObject(self.getFood(gameState).asList(), gameState)
-        closestFoodProblem = PositionSearchProblem(gameState, gameState.getAgentPosition(self.index), goal=closestFood)
-        actions = wastarSearch(closestFoodProblem, manhattanHeuristic)
-        return actions[0]
-        
+        pass
     
     def getSuccessor(self, gameState, action):
-        
         successor = gameState.generateSuccessor(self.index, action)
         position = successor.getAgentState(self.index).getPosition()
         if position != util.nearestPoint(position):
@@ -103,12 +92,11 @@ class DummyAgent(CaptureAgent):
         else:
             return successor
     
+    def getFeatures(self, gameState, action):
+        pass
     
     def evaluate(self, gameState, action):
-        features = self.getFeatures(gameState, action)
-        weights = self.getWeights(gameState, action)
-        return features * weights
-    
+        pass
     
     def closestObject(self, listOfObjects, gameState):
         currentPosition = gameState.getAgentPosition(self.index)
@@ -149,26 +137,17 @@ class WaStarInvader(DummyAgent):
   
     """
     
-    DummyAgent.mode = "invader starting mode"
+    mode = "invader starting mode"
     
     def chooseAction(self, gameState):
-        """
-        Choose the action that can give me the best reward at current location
-        """
-        if gameState.getAgentPosition(self.index) == gameState.getInitialAgentPosition(self.index):
-            #The Invader Agent is at the starting point, go to the closest opponent food.
-            closestFood, distance = self.closestObject(self.getFood(self.index), gameState)
-            closestFoodProblem = PositionSearchProblem(gameState, gameState.getAgentPosition(self.index), goal = closestFood)
+        if self.mode == "invader starting mode":
+            closestFood, distance = self.closestObject(self.getFood(gameState).asList(), gameState)
+            closestFoodProblem = PositionSearchProblem(gameState, gameState.getAgentPosition(self.index), goal=closestFood)
             actions = wastarSearch(closestFoodProblem, manhattanHeuristic)
-            print(actions)
-            return actions
-        actions = gameState.getLegalActions(self.index)
-        values = [self.evaluate(gameState, a) for a in actions]
-        maxValue = max(values)
-        bestActions = [a for a, v in zip(actions, values) if v == maxValue]
-        # if amount of food <= 2, go home, # TODO
-        return random.choice(bestActions)
+            return actions[0]
     
+    def evaluate(self, gameState, action):
+        print("hi")
     
     def getFeatures(self, gameState, action):
         # features could be a list of heuristic values e.g [foodHuer, capsuleHeur, avoidGhost, huntGhost,...]
@@ -177,10 +156,26 @@ class WaStarInvader(DummyAgent):
         # Under Invader Power Mode: getOpponents,
         # Under Invader Retreat Mode: getBorder
         # Under Invader Starting Mode: getBorder
-        if self.mode == "invader starting mode":
-            closestFood, distance = self.closestObject(self.getFood(self.index), gameState)
-            return{"closestBorderDistance": distance, "closestGhostDistance": 0, "closestFoodDistance": 0, "closestCapsuleDistance": 0, "score": 0}
-        return {}
+        foodList = self.getFood(gameState).asList()
+        capsuleList = self.getCapsules(gameState)
+        opponentList = []
+        for opponentIndex in self.getOpponents(gameState):
+            if not gameState.getAgentState(opponentIndex).isPacman:
+                opponentList.append(gameState.getAgentPosition(opponentIndex))
+        closestFood, closestFoodDistance = self.closestObject(foodList, gameState)
+        remainingFood = len(foodList)
+        closestCapsule, closestCapsuleDistance = self.closestObject(capsuleList, gameState)
+        remainingCapsule = len(capsuleList)
+        notNoneOpponentList = []
+        for i in range(len(opponentList)):
+            if opponentList[i] is not None:
+                notNoneOpponentList.append(opponentList[i])
+        closestOpponent = None
+        closestOpponentDistance = sys.maxsize
+        if len(notNoneOpponentList) != 0:
+            closestOpponent, closestOpponentDistance = self.closestObject(notNoneOpponentList, gameState)
+        scoreDifference = self.getScore(gameState)
+        return{"closestFoodDistance": closestFoodDistance, "remainingFood": remainingFood, "closestCapsuleDistance": closestCapsuleDistance, "remainingCapsule": remainingCapsule, "closestOpponentDistance": closestOpponentDistance, "score": scoreDifference}
     
     def getWeights(self, gameState, action):
         # Weights reflects priorities of features. The weight list varies as the game advances
@@ -205,7 +200,10 @@ class WaStarDefender(DummyAgent):
   
     """
     def chooseAction(self, gameState):
-        pass
+        closestFood, distance = self.closestObject(self.getFood(gameState).asList(), gameState)
+        closestFoodProblem = PositionSearchProblem(gameState, gameState.getAgentPosition(self.index), goal=closestFood)
+        actions = wastarSearch(closestFoodProblem, manhattanHeuristic)
+        return actions[0]
     
     def getFeatures(self, gameState, action):
         pass
