@@ -52,6 +52,8 @@ class DummyAgent(CaptureAgent):
     create an agent as this is the bare minimum.
     """
     
+    mode = ""
+    
     def registerInitialState(self, gameState):
         """
         This method handles the initial setup of the
@@ -85,19 +87,12 @@ class DummyAgent(CaptureAgent):
         This part implements the chosen algorithm acutually  -- tech 1: heuristic search wastar
         """
         # chosen from ['North', 'South', 'West', 'East', 'Stop']
-        actions = gameState.getLegalActions(self.index)
+
+        closestFood, distance = self.closestObject(self.getFood(gameState).asList(), gameState)
+        closestFoodProblem = PositionSearchProblem(gameState, gameState.getAgentPosition(self.index), goal=closestFood)
+        actions = wastarSearch(closestFoodProblem, manhattanHeuristic)
+        return actions[0]
         
-        for action in actions:
-            succ = self.getSuccessor(gameState, action)
-            
-            # evaluate the one successor, as this is not a path-finding task, it should be
-            # "real-time", thus the algorithm should determine which is the best move among
-            # five possible actions
-        
-        '''
-        You should change this in your own agent.
-        '''
-        return random.choice(actions)
     
     def getSuccessor(self, gameState, action):
         
@@ -113,6 +108,16 @@ class DummyAgent(CaptureAgent):
         features = self.getFeatures(gameState, action)
         weights = self.getWeights(gameState, action)
         return features * weights
+    
+    
+    def closestObject(self, listOfObjects, gameState):
+        currentPosition = gameState.getAgentPosition(self.index)
+        closestObject = None
+        closestDistance = sys.maxsize
+        for candidateObject in listOfObjects:
+            if self.getMazeDistance(candidateObject, currentPosition) < closestDistance:
+                closestObject = candidateObject
+        return closestObject, closestDistance
 
 ######################################
 #            WA* Agents
@@ -143,6 +148,9 @@ class WaStarInvader(DummyAgent):
                       Highly Disadvantaged --> Give-up Defending
   
     """
+    
+    DummyAgent.mode = "invader starting mode"
+    
     def chooseAction(self, gameState):
         """
         Choose the action that can give me the best reward at current location
@@ -150,7 +158,7 @@ class WaStarInvader(DummyAgent):
         if gameState.getAgentPosition(self.index) == gameState.getInitialAgentPosition(self.index):
             #The Invader Agent is at the starting point, go to the closest opponent food.
             closestFood, distance = self.closestObject(self.getFood(self.index), gameState)
-            closestFoodProblem = PositionSearchProblem(gameState, goal = closestFood)
+            closestFoodProblem = PositionSearchProblem(gameState, gameState.getAgentPosition(self.index), goal = closestFood)
             actions = wastarSearch(closestFoodProblem, manhattanHeuristic)
             print(actions)
             return actions
@@ -160,15 +168,6 @@ class WaStarInvader(DummyAgent):
         bestActions = [a for a, v in zip(actions, values) if v == maxValue]
         # if amount of food <= 2, go home, # TODO
         return random.choice(bestActions)
-    
-    def closestObject(self, listOfObjects, gameState):
-        currentPosition = gameState.getAgentPosition(self.index)
-        closestObject = None
-        closestDistance = sys.maxsize
-        for candidateObject in listOfObjects:
-            if self.getMazeDistance(candidateObject, currentPosition) < closestDistance:
-                closestObject = candidateObject
-        return closestObject, closestDistance
     
     
     def getFeatures(self, gameState, action):
@@ -338,7 +337,7 @@ class PositionSearchProblem(SearchProblem):
 
     Note: this search problem is fully specified; you should NOT change it.
     """
-    def __init__(self, gameState, costFn = lambda x: 1, goal=(1,1), start=None, warn=True, visualize=True):
+    def __init__(self, gameState, startState, costFn = lambda x: 1, goal=(1,1), start=None, warn=True, visualize=True):
         """
         Stores the start and goal.
 
@@ -347,13 +346,11 @@ class PositionSearchProblem(SearchProblem):
         goal: A position in the gameState
         """
         self.walls = gameState.getWalls()
-        self.startState = gameState.getPacmanPosition()
+        self.startState = startState
         if start != None: self.startState = start
         self.goal = goal
         self.costFn = costFn
         self.visualize = visualize
-        if warn and (gameState.getNumFood() != 1 or not gameState.hasFood(*goal)):
-            print('Warning: this does not look like a regular search maze')
 
         # For display purposes
         self._visited, self._visitedlist, self._expanded = {}, [], 0 # DO NOT CHANGE
