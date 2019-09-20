@@ -20,6 +20,8 @@ import game
 #################
 # Team creation #
 #################
+from graphicsDisplay import InfoPane
+
 
 def createTeam(firstIndex, secondIndex, isRed,
                first = 'WaStarInvader', second = 'WaStarDefender'):
@@ -95,21 +97,38 @@ class DummyAgent(CaptureAgent):
     def getFeatures(self, gameState, action):
         pass
     
+    def getWeights(self, gameState, action):
+        pass
+    
     def evaluate(self, gameState, action):
         pass
     
     def closestObject(self, listOfObjects, gameState):
         currentPosition = gameState.getAgentPosition(self.index)
-        closestObject = None
+        closestObj = None
         closestDistance = sys.maxsize
         for candidateObject in listOfObjects:
             if self.getMazeDistance(candidateObject, currentPosition) < closestDistance:
-                closestObject = candidateObject
-        return closestObject, closestDistance
+                closestObj = candidateObject
+        return closestObj, closestDistance
+    
+    def closestObjectUsingPosition(self, listOfObjects, currentPosition):
+        closestObj = None
+        closestDistance = sys.maxsize
+        for candidateObject in listOfObjects:
+            if self.getMazeDistance(candidateObject, currentPosition) < closestDistance:
+                closestObj = candidateObject
+        return closestObj, closestDistance
+
+
+
+
 
 ######################################
 #            WA* Agents
 ######################################
+
+
 class WaStarInvader(DummyAgent):
     """
     Invader Behavior design:
@@ -144,7 +163,25 @@ class WaStarInvader(DummyAgent):
             closestFood, distance = self.closestObject(self.getFood(gameState).asList(), gameState)
             closestFoodProblem = PositionSearchProblem(gameState, gameState.getAgentPosition(self.index), goal=closestFood)
             actions = wastarSearch(closestFoodProblem, manhattanHeuristic)
+            self.updateScore(gameState)
             return actions[0]
+        else:
+            actions = gameState.getLegalActions(self.index)
+            bestReward = -1 * sys.maxsize + 1
+            bestActions = []
+            for action in actions:
+                actionReward = self.evaluate(gameState, action)
+                if actionReward >= bestReward:
+                    bestReward = actionReward
+                    bestActions.append(action)
+            return random.choice(bestActions)
+    
+    def updateScore(self, gameState):
+        gameState.data.score = len(gameState.getRedFood().asList()) - len(gameState.getBlueFood().asList())
+    
+    def updateMode(self, gameState):
+        scoreThreshold = 5
+        
     
     def evaluate(self, gameState, action):
         print("hi")
@@ -156,15 +193,16 @@ class WaStarInvader(DummyAgent):
         # Under Invader Power Mode: getOpponents,
         # Under Invader Retreat Mode: getBorder
         # Under Invader Starting Mode: getBorder
+        successor = self.getSuccessor(gameState, action)
         foodList = self.getFood(gameState).asList()
         capsuleList = self.getCapsules(gameState)
         opponentList = []
         for opponentIndex in self.getOpponents(gameState):
             if not gameState.getAgentState(opponentIndex).isPacman:
                 opponentList.append(gameState.getAgentPosition(opponentIndex))
-        closestFood, closestFoodDistance = self.closestObject(foodList, gameState)
+        closestFood, closestFoodDistance = self.closestObjectUsingPosition(foodList, successor)
         remainingFood = len(foodList)
-        closestCapsule, closestCapsuleDistance = self.closestObject(capsuleList, gameState)
+        closestCapsule, closestCapsuleDistance = self.closestObjectUsingPosition(capsuleList, successor)
         remainingCapsule = len(capsuleList)
         notNoneOpponentList = []
         for i in range(len(opponentList)):
@@ -173,24 +211,47 @@ class WaStarInvader(DummyAgent):
         closestOpponent = None
         closestOpponentDistance = sys.maxsize
         if len(notNoneOpponentList) != 0:
-            closestOpponent, closestOpponentDistance = self.closestObject(notNoneOpponentList, gameState)
+            closestOpponent, closestOpponentDistance = self.closestObjectUsingPosition(notNoneOpponentList, successor)
         scoreDifference = self.getScore(gameState)
-        return{"closestFoodDistance": closestFoodDistance, "remainingFood": remainingFood, "closestCapsuleDistance": closestCapsuleDistance, "remainingCapsule": remainingCapsule, "closestOpponentDistance": closestOpponentDistance, "score": scoreDifference}
+        return {"closestFoodDistance": closestFoodDistance, "remainingFood": remainingFood,
+                "closestCapsuleDistance": closestCapsuleDistance, "remainingCapsule": remainingCapsule,
+                "closestOpponentDistance": closestOpponentDistance,
+                "score": scoreDifference}
     
     def getWeights(self, gameState, action):
         # Weights reflects priorities of features. The weight list varies as the game advances
         # e.g, Initially, the invader agent cares anything less than how to cross the boarder
         if self.mode == "invader starting mode":
             print("Invader Starting Mode")
-            return {"crossBorder": 1, "eatOpponent": 0, "eatFood": 0, "eatCapsule": 0, "score": 0}
+            return {"closestFoodDistance": 1, "remainingFood": 0,
+                    "closestCapsuleDistance": 1.1, "remainingCapsule": 0,
+                    "closestOpponentDistance": 0,
+                    "score": 0}
         elif self.mode == "invader normal mode":
             print("Invader Normal Mode")
+            return {"closestFoodDistance": 1, "remainingFood": 0,
+                    "closestCapsuleDistance": 1.1, "remainingCapsule": 0,
+                    "closestOpponentDistance": 0,
+                    "score": 0}
         elif self.mode == "invader power mode":
             print("Invader Power Mode")
+            return {"closestFoodDistance": 1, "remainingFood": 0,
+                    "closestCapsuleDistance": 1.1, "remainingCapsule": 0,
+                    "closestOpponentDistance": 0,
+                    "score": 0}
         elif self.mode == "invader retreat mode":
             print("Invader Retreat Mode")
-        pass
+            return {"closestFoodDistance": 1, "remainingFood": 0,
+                    "closestCapsuleDistance": 1.1, "remainingCapsule": 0,
+                    "closestOpponentDistance": 0,
+                    "score": 0}
 
+
+
+
+#################################
+#   WASTAR DEFENDER
+#################################
 
 class WaStarDefender(DummyAgent):
     """
