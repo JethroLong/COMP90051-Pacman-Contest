@@ -16,13 +16,16 @@ from captureAgents import CaptureAgent
 import random, time, util
 from game import Directions
 import game
+from util import nearestPoint
+import re, os
+
 
 #################
 # Team creation #
 #################
 
 def createTeam(firstIndex, secondIndex, isRed,
-               first = 'DummyAgent', second = 'DummyAgent'):
+               first = 'InvaderConvDQN', second = 'DefenderConvDQN', **kwargs):
   """
   This function should return a list of two agents that will form the
   team, initialized using firstIndex and secondIndex as their agent
@@ -253,16 +256,18 @@ from keras.initializers import glorot_uniform, Constant
 import numpy as np
 
 class ConvDQN():
-    def __init__(self, state_size, num_actions):
-        self.state_size = state_size
-        self.num_actions = num_actions
-        self.memory = ReplayMemory(capacity=100000)
+    def __init__(self):
+        self.numTrained = 0
+        self.state_size = (32, 16, 7)
+        self.num_actions = 5 # [stop, north, south, west, east]
         self.gamma = 0.95    # discount rate
         self.epsilon = 1.0  # exploration rate
         self.epsilon_min = 0.01
         self.epsilon_decay = 0.995
         self.learning_rate = 0.001
         self.model = self.model_config()
+        self.load()
+        self.model_name = ''
 
     def model_config(self):
         '''
@@ -270,37 +275,42 @@ class ConvDQN():
         :return:  model object
         '''
         model = Sequential()
-        # conv1
-        model.add(Conv2D(32, (5, 5), strides=(1, 1), padding='same',
+        # conv1  filters=32, kernel_size=5, stride=1, padding=valid   (?,32,16,7) -> (?, 28,12,32)
+        model.add(Conv2D(32, (5, 5), strides=(1, 1), padding='valid',
                               activation='relu', bias_initializer=Constant(0.1),
                               kernel_initializer=glorot_uniform()))
-        model.add(MaxPooling2D((3, 3), strides=(2, 2), padding='same'))
 
-        # conv2
+        # MaxPool1    pool_size = 3, stride=1, padding=same   (28,12,32) -> (26,20,32)
+        model.add(MaxPooling2D((3, 3), strides=(1, 1), padding='valid'))
+
+        # conv2  filters=64, kernel_size=3, stride=1, padding=valid   (26,20,32) -> (24,4,64)
         model.add(Conv2D(64, (3, 3), strides=(1, 1), padding='valid',
                               activation='relu', bias_initializer=Constant(0.1),
                               kernel_initializer=glorot_uniform()))
-        model.add(MaxPooling2D((3, 3), strides=(2, 2), padding='same'))
 
-        # conv3
-        model.add(Conv2D(128, (2, 2), strides=(1, 1), padding='valid',
+        # MaxPool2    pool_size = 2, stride=2, padding=same   (24,4,64) -> (24,4,64)
+        model.add(MaxPooling2D((2, 2), strides=(2, 2), padding='same'))
+
+        # conv3  filters=128, kernel_size=2, stride=2, padding=valid   (24,4,64) -> (12,2,128)
+        model.add(Conv2D(128, (2, 2), strides=(2, 2), padding='valid',
                               activation='relu', bias_initializer=Constant(0.1),
                               kernel_initializer=glorot_uniform()))
-        model.add(MaxPooling2D((3, 3), strides=(2, 2), padding='same'))
-        model.add(Flatten())
 
-        # FC1 ( in: flatten units   out: 256)
-        model.add(Dense(256, input_dim=self.count_neurons(self.state_size), activation='relu'))
+        # AvgPool3    pool_size = 2, stride=1, padding=valid   (12,2,128) -> (11,1,128)
+        model.add(AveragePooling2D((2, 2), strides=(1, 1), padding='valid'))
+        model.add(Flatten())  # (12,2,128) -> (1,3072)
+
+        # FC1 ( in: 1408   out: 256)
+        model.add(Dense(256, activation='relu'))
 
         # FC2 ( in: 256 out: 256)
         model.add(Dense(256, activation='relu'))
 
-        # Output layer ( in: 256  out: num_actions)
+        # Output layer ( in: 256  out: 5)
         model.add(Dense(self.num_actions, activation='linear'))
 
         # Adam Optimizer
         model.compile(loss='mse', optimizer=Adam(lr=self.learning_rate) )
-
         return model
 
     def forward(self, state):
@@ -310,66 +320,83 @@ class ConvDQN():
         """
         return self.model.predict(state)
 
-    def learn(self, input, target):
+    def batch_learn(self, input, target):
         self.model.train_on_batch(input, target)
 
     # TODO
     def count_neurons(self, input_size):
         return 0
 
-    # def learn(self, samples):
-    #     for state, next_state, reward, action in samples:
-    #         Q_target = reward + self.gamma * np.amax(self.model.predict(next_state))
-    #         target = predict = self.model.predict(state)
-    #         target[0][action] = Q_target
-    #         self.model.fit(state, target, epochs=1, verbose=0)
-    #     if self.epsilon > self.epsilon_min:
-    #         self.epsilon *= self.epsilon_decay
-    #
-    # def update(self, reward, new_state):
-    #     self.memory.push( (self.last_state, new_state, self.last_action, self.last_reward) )
-    #     action = self.choose_action(new_state)
-    #     if len(self.memory.backup) > 32:
-    #         self.learn(self.memory.sampling(32))
-    #     self.last_action = action
-    #     self.last_state = new_state
-    #     self.last_reward = reward
-    #     return action
+    def load(self, model_file=None):
 
-    def load(self, name):
-        self.model.load_weights(name)
+        try:
+            model_indices = [0]
+            print("\nTrying to load model...", end=' ')
+            if model_file is not None:
+                self.model.load_weights(model_file)
+            else:
+                for file in os.listdir(os.getcwd()):
+                    if file.endswith(".model"):
+                        model_indices.append(int(re.findall(r'_(\d+)', file)[0]))
+                self.numTrained = max(model_indices)
+                self.model_name = "myModel_episode_{}.model".format(self.numTrained)
+                model_file = os.path.join(os.getcwd(), self.model_name)
+                self.model.load_weights(model_file)
 
-    def save(self, name):
-        self.model.save_weights(name)
+            if self.numTrained != 0:
+                print("Model has been loaded !\n")
+            else:
+                print("No pre-trained model...\nBuild new model...\n")
+        except:
+            print("No pre-trained model...\nBuild new model...\n")
 
-    # def choose_action(self, state):
-    #     Q_values = self.model.predict(state)
-    #     softmax_out = self.softmax_with_temperature(Q_values, 7)
-    #     # action = np.where(softmax_out[0] == 1)[0][0]
-    #     action = self.softmax_with_temperature(Q_values, 7)
-    #     return action
+    def save(self, replace=True):
+        self.numTrained += 1
+        model_path = os.path.join(os.getcwd(), "myModel_episode_{}.model".format(self.numTrained))
+        if not replace:
+            self.model.save_weights(model_path)
+            print("\nModel saved as myModel_episode_{}.model\n".format(self.numTrained))
+        else:
+            try:
+                os.remove(os.path.join(os.getcwd(), self.model_name))
+                self.model.save_weights(model_path)
+            except:
+                print("\nFail to delete previous model")
+                self.model.save_weights(model_path)
+            print("Model saved as myModel_episode_{}.model\n".format(self.numTrained))
+
+
 
 class SoftmaxBody:
     def __init__(self, T):
         self.T = T  # temperature, the higher t introduces more uncertainty
+
+    def softmax(self, x):
+        """Compute softmax values for each sets of scores in x."""
+        e_x = np.exp(x - np.max(x))
+        return e_x / e_x.sum(axis=0)  # only difference
 
     def softmax_with_temperature(self, x):
         '''
         :param x: Q_value array
         :return: the index of chosen action
         '''
-        x = np.array(x) ** (1 / self.T)
-        x_sum = x.sum()
-        x = x / x_sum
-        return np.argmax(np.random.multinomial(1, x, 1))  # action index
+        x = np.array(x) / self.T
+        print("\nscale T: ", x)
+        x = self.softmax(x)
+        print("Probs: ", x)
+        action = np.argmax(np.random.multinomial(1, x, 1))
+        print("Prediction: {}, choose action {}\n".format(x, action))
+        return action  # action index
 
 from collections import deque, namedtuple
 class ReplayMemory(object):
-    def __init__(self, n_steps, capacity=10000):
+    def __init__(self, capacity=10000):
         self.capacity = capacity
-        self.n_steps = n_steps
-        self.n_steps_iter = iter(n_steps)
         self.buffer = deque()
+
+    def __len__(self):
+        return len(self.buffer)
 
     def sample_batch(self, batch_size):  # creates an iterator that returns random batches
         ofs = 0
@@ -379,58 +406,32 @@ class ReplayMemory(object):
             yield vals[ofs*batch_size: (ofs+1)*batch_size]
             ofs += 1
 
-    def run_steps(self, samples):
-        while samples > 0:
-            entry = next(self.n_steps_iter) # 10 consecutive steps
-            self.buffer.append(entry) # we put 200 for the current episode
-            samples -= 1
+    def push(self, history):
+        self.buffer.append(history)
         while len(self.buffer) > self.capacity: # we accumulate no more than the capacity (10000)
             self.buffer.popleft()
 
+
 # define one step tuple
-Step = namedtuple('Step', ['state', 'action', 'reward', 'done'])
+Step = namedtuple('Step', ['state', 'action', 'reward'])
 class NStepProgress:
     """
     the agent learns from a n_step history, not for a single step
     """
-    def __init__(self, pacman_interface, ai, n_step=5):
+    def __init__(self, ai, n_step=5):
         self.ai = ai
-        self.pacman_interface = pacman_interface
         self.rewards = []
         self.n_step = n_step
+        self.history = deque()
 
-    def __iter__(self):
-        state = self.pacman_interface.reset()
-        history = deque()
-        reward = 0.0
-        while True:
-            action = self.ai(np.array([state]))[0][0]
-            next_state, r, is_done, _ = self.pacman_interface.step(action)
-
-            reward += r
-            history.append(Step(state=state, action=action, reward=r, done=is_done))
-            while len(history) > self.n_step + 1:
-                history.popleft()
-            if len(history) == self.n_step + 1:
-                yield tuple(history)
-
-            state = next_state
-            if is_done:
-                if len(history) > self.n_step + 1:
-                    history.popleft()
-                while len(history) >= 1:
-                    yield tuple(history)
-                    history.popleft()
-
-                self.rewards.append(reward)
-                reward = 0.0
-                state = self.pacman_interface.reset()
-                history.clear()
-
-    def rewards_steps(self):
-        rewards_steps = self.rewards
-        self.rewards = []
-        return rewards_steps
+    def yieldsHistory(self, oneStep):
+        self.rewards.append(oneStep.reward)
+        self.history.append(oneStep)
+        while len(self.history) > self.n_step:
+            self.history.popleft()
+        if len(self.history) == self.n_step:
+            return tuple(self.history)
+        return None
 
 
 class AI:
@@ -439,143 +440,309 @@ class AI:
         self.body = body  # SoftmaxBody
 
     def __call__(self, input_state):
-        input = tf.Variable(np.array(input_state, dtype=np.float32))
-        output = self.brain.forward(input)
+        input_state = np.array(input_state, dtype=np.float32)
+        input_volume = self.check_dim(input_state)
+        input_volume = input_volume.reshape((1,) + input_volume.shape)
+
+        output = self.brain.forward(input_volume)[0]
+        # print("output: {},  length: {}, dtype: {}".format(output, len(output), type(output[0])))
+
         actions = self.body.softmax_with_temperature(output)
-        return actions.data.numpy()
+        return actions
 
+    # TODO
+    def check_dim(self, input_state):
+        if input_state.shape != (32, 16, 7):
+            # resize the input
+            pass
+        return input_state
 
-class MoveAverage:
-    def __init__(self, size):
-        self.list_of_rewards = []
-        self.size = size
-    def add(self, rewards):
-        if isinstance(rewards, list):
-            self.list_of_rewards += rewards
-        else:
-            self.list_of_rewards.append(rewards)
-        while len(self.list_of_rewards) > self.size:
-            del self.list_of_rewards[0]
-    def average(self):
-        return np.mean(self.list_of_rewards)
-
-# training
-# state "image" pre-processing
-
-# TODO
-def state_resize(input_state):
-    return
-
-input_image = None
-state_size = state_resize(input_image)
-num_actions = 5
-
-# create a pacman game envrionment
-pacman_interface = None
-
-# Build an AI
-cnn = ConvDQN(state_size, num_actions)
-softmax_body = SoftmaxBody(T=2.0)
-ai = AI(brain=cnn, body=softmax_body)
-ma = MoveAverage(500)
-
-# Set up experience replay
-n_steps = NStepProgress(pacman_env, ai=ai, n_step=5)
-memory = ReplayMemory(n_steps=n_steps, capacity=10000)
-
-
-def eligibility_trace(batch):
-    gamma = 0.99
-    inputs = []
-    targets = []
-    for series in batch: # series --> one history containing n steps
-        input = np.array([series[0].state, series[-1].state], dtype=np.float32)
-        output = ai.brain.forward(input)
-        cumulated_reward = 0.0 if series[-1].done else output[1].data.max()
-        for step in reversed(series[:-1]):
-            cumulated_reward = step.reward + gamma * cumulated_reward
-        state = series[0].state
-        target = output[0].data
-        target[series[0].action] = cumulated_reward
-        inputs.append(state)
-        targets.append(target)
-    return np.array(inputs, dtype=np.float32), np.array(targets, dtype=np.float32)
-
-# Training the AI
-# loss = MSELoss()
-# optimizer = optim.Adam(cnn.parameters(), lr = 0.001)
-nb_epochs = 100
-
-for epoch in range(1, nb_epochs + 1):
-    memory.run_steps(200)
-    for batch in memory.sample_batch(128): # batch size is 128
-        inputs, targets = eligibility_trace(batch)   # input should be numpy array
-        # predictions = cnn.forward(inputs)
-        # loss_error = loss(predictions, targets)
-        # optimizer.zero_grad()
-        # loss_error.backward()
-        # optimizer.step()
-        ai.brain.learn(inputs, targets)
-    rewards_steps = n_steps.rewards_steps()
-    ma.add(rewards_steps)
-    avg_reward = ma.average()
-    print("Epoch: %s, Average Reward: %s" % (str(epoch), str(avg_reward)))
-    # if avg_reward >= 1500:
-    #     print("Congratulations, your AI wins")
-    #     break
-
-
-    # test
-    win_rate = 0.7
-
-    ai.brain.save("model_Epoch_{}_winrate_{}.h5".format(nb_epochs, win_rate))
-
+    # TODO
+    def resize_input(self, input_state):
+        pass
 
 
 ########################
 #     ConvDQN Agents
 ########################
 class BasicAgentConvDQN(CaptureAgent):
-    def __init__(self):
-        super(BasicAgentConvDQN, self).__init__()
+    def __init__(self, index, timeForComputing = .1):
+        super().__init__(index, timeForComputing)
+        self.controller = None
+        self.n_steps = None
+        self.memory = None
 
-        conv_dqn = ConvDQN(state_size, num_actions)
-        softmax_body = SoftmaxBody(T=2.0)
-        self.controller = AI(brain=conv_dqn, body=softmax_body)
+        self.prev_state = None
+        self.current_state = None
 
-        self. wall_matrix = self.getWallMatrix()
+        self.prev_reward = 0
+        self.step_reward = 0
+
+        self.prev_action = None
+
+        self.invader = None
+
+        self.maze_dim = None
+        self.walls = None
+        self.wall_matrix = None
+
+        # training
+        self.epochs = None
+        self.cumulated_rewards = 0.0
+        self.num_of_step = 0
 
     def registerInitialState(self, gameState):
+        self.current_state = gameState
+        self.walls = gameState.getWalls()
+        # dimensions of the grid world w * h
+        self.maze_dim = (gameState.data.layout.width, gameState.data.layout.height)
+
+        self.wall_matrix = self.getWallMatrix()
+
+        conv_dqn = ConvDQN()
+        softmax_body = SoftmaxBody(T=7.0)
+        self.controller = AI(brain=conv_dqn, body=softmax_body)
+
+        self.n_steps = NStepProgress(ai=self.controller, n_step=5)
+        self.memory = ReplayMemory(capacity=10000)
+
         self.start = gameState.getAgentPosition(self.index)
         CaptureAgent.registerInitialState(self, gameState)
 
     def chooseAction(self, gameState):
-        actions = gameState.getLegalActions(self.index)
+        self.current_state = gameState.deepCopy()
+        # Controller picks an action
+        state_volume = self.getStateVolume(self.current_state)
+        candidate_action_index = self.controller(state_volume)
 
-        for action in actions:
-            succ = self.getSuccessor(gameState, action)
+        if self.prev_state is not None:
+            self.addOneStep(self.current_state)
+        else:
+            self.prev_state = self.current_state.deepCopy()
+
+        self.prev_action = candidate_action_index
+        candidate_action = self.getDirection(candidate_action_index)
+        legal_act = gameState.getLegalActions(self.index)
+        if candidate_action not in legal_act:
+            return Directions.STOP
+
+        # print(candidate_action)
+        return candidate_action
+
+    def calculateRewardForPrevAction(self, gameState):
+
+        util.raiseNotDefined()
+
+    def addOneStep(self, gameState):
+        self.prev_reward = self.calculateRewardForPrevAction(gameState)
+        prev_step = Step(state=self.getStateVolume(self.prev_state),
+                         action=self.prev_action, reward=self.prev_reward)
+        prev_history = self.n_steps.yieldsHistory(oneStep=prev_step)
+        if prev_history is not None:
+            self.memory.push(prev_history)
+        self.prev_state = gameState.deepCopy()
+
+    def final(self, gameState):
+        '''
+          override function
+        :param gameState:
+        :return:
+        '''
+        # self.prev_reward = self.calculateReward()
+        score = self.getScore(gameState)
+        if score > 0:
+            self.prev_reward = 100
+        elif score < 0:
+            self.prev_reward = -100
+        else:
+            self.prev_reward = -50
+
+        final_step = Step(state=self.getStateVolume(self.prev_state), action=self.prev_action, reward=self.prev_reward)
+        prev_history = self.n_steps.yieldsHistory(oneStep=final_step)
+        if prev_history is not None:
+            self.memory.push(prev_history)
+        self.train()
 
 
-    # baseline matrix = shape of the maze
-    # state model: (wallMaxtrix, agentPos, foodMatrix)
-     # TODO
+    # state model: (w * h * num_of_channels), in this case, num_of_channels = 7
+    #   (wallMaxtrix, foodMatrix, capsuleMatrix, myPositionMatrix, pacmanMatrix, GhostMatrix, ScaredGhostMatrix)
+
     def getWallMatrix(self):
-        return None
+        '''
+         isWall: 1,  not wall: 0
+        '''
+        wallMatrix = np.zeros(self.maze_dim, dtype=np.int)
+        return self.matrixValueMapping1(self.walls, wallMatrix, map_dict={"True":1, "False":0})
 
     def getFoodMatrix(self, gameState):
-        pass
+        '''
+        myFood: -1, targetFood: 1, all others: 0
+        '''
+        foodMatrix = np.zeros(self.maze_dim, dtype=np.int)
+        defendFoodMatrix = np.zeros(self.maze_dim, dtype=np.int)
+        Food = self.getFood(gameState)
+        defendFood = self.getFoodYouAreDefending(gameState)
+        foodMatrix = self.matrixValueMapping1(Food, foodMatrix, map_dict={"True": 1, "False": 0})
+        defendFoodMatrix = self.matrixValueMapping1(defendFood, defendFoodMatrix, map_dict={"True": -1, "False": 0})
+        # if gameState.isOnRedTeam(self.index):
+        #     redFoodMatrix = self.matrixValueMapping(redFood, redFoodMatrix, map_dict={"True": 1, "False": 0})
+        #     blueFoodMatrix = self.matrixValueMapping(blueFood, blueFoodMatrix, map_dict={"True": -1, "False": 0})
+        # else:
+        #     blueFoodMatrix = self.matrixValueMapping(blueFood, blueFoodMatrix, map_dict={"True": 1, "False": 0})
+        #     redFoodMatrix = self.matrixValueMapping(redFood, redFoodMatrix, map_dict={"True": -1, "False": 0})
+
+        return np.add(foodMatrix, defendFoodMatrix)
 
     def getCapsuleMatrix(self, gameState):
+        '''
+        myCapsule: 1,  opponent capsule: -1 , all others: 0
+        '''
+        capsuleMatrix = np.zeros(self.maze_dim, dtype=np.int)
 
-    def getOpponentMatrix(self, gameState):
-        # Observable opponents -- > ghost: Scared: 1   normal:-1    pacman: 1
-        pass
+        # defendCapsuleMatrix = np.zeros(self.maze_dim, dtype=np.int)
+        # capsules = self.getCapsules(gameState)
+        # defendCapsules = self.getCapsulesYouAreDefending(gameState)
+
+        capsule_list = gameState.getCapsules()
+        if len(capsule_list) > 0:
+            for (x, y) in capsule_list:
+                if gameState.isOnRedTeam(self.index):
+                    capsuleMatrix[x][-1-y] = 1 if x <= self.maze_dim[0] // 2 else -1
+                else:
+                    capsuleMatrix[x][-1-y] = -1 if x <= self.maze_dim[0] // 2 else 1
+        return capsuleMatrix
+
+    def getGhostMatrix(self, gameState):
+        '''
+        Observable Ghosts -- > myTeam ghost: 1   opponent ghost: -1,  all others 0
+        '''
+        matrix = np.zeros(self.maze_dim, dtype=np.int)
+        find_position = lambda index: gameState.getAgentPosition(index) \
+            if not gameState.getAgentState(index).isPacman \
+                and not gameState.getAgentState(index).scaredTimer > 0 \
+                    else (-1, -1)
+        self.matrixValueMapping2(matrix, gameState, find_position)
+        return matrix
+
+    def getPacmanMatrix(self, gameState):
+        '''
+        myTeam pacman: 1,  opponent pacman: -1,  all others : 0
+        '''
+        matrix = np.zeros(self.maze_dim, dtype=np.int)
+        find_position = lambda index: gameState.getAgentPosition(index) \
+            if gameState.getAgentState(index).isPacman else (-1, -1)
+        # print("from getPacmanMatrix: ")
+        self.matrixValueMapping2(matrix, gameState, find_position)
+
+        return matrix
+
+    def getScaredGhost(self, gameState):
+        '''
+        scared myTeam Ghost: 1,   scared opponent Ghost: -1,  all others: 0
+        '''
+        matrix = np.zeros(self.maze_dim, dtype=np.int)
+        find_position = lambda index: gameState.getAgentPosition(index) \
+            if not gameState.getAgentState(index).isPacman \
+                and gameState.getAgentState(index).scaredTimer > 0 \
+                    else (-1, -1)
+        self.matrixValueMapping2(matrix, gameState, find_position)
+
+        return matrix
 
     def getMyPositionMatrix(self, gameState):
-        pass
+        '''
+        myPosition: 1,  all other: 0
+        '''
+        myPositionMatrix = np.zeros(self.maze_dim, dtype=np.int)
+        x,y = gameState.getAgentPosition(self.index)
+        myPositionMatrix[x][-1-y] = 1
+        return myPositionMatrix
 
+    def matrixViewer(self, matrix):
+        for i in range(self.maze_dim[1]):
+            print(matrix.T[i])
 
+    def matrixValueMapping1(self, valueGrid, matrix, map_dict):
+        w, h = self.maze_dim
+        for i in range(w):
+            for j in range(h):
+                matrix[i][-1 - j] = map_dict["True"] if valueGrid[i][j] else map_dict["False"]
+        return matrix
 
+    def matrixValueMapping2(self, matrix, gameState, func):
+        values = (1, -1)
+        if not gameState.isOnRedTeam(self.index):
+            values = values[::-1]
+        for pos in map(func, gameState.getRedTeamIndices()):
+            if pos and pos[0] + pos[1] > 0: matrix[pos[0]][-1-pos[1]] = values[0]
+        for pos in map(func, gameState.getBlueTeamIndices()):
+            if pos and pos[0] + pos[1] > 0: matrix[pos[0]][-1-pos[1]] = values[1]
+        return matrix
+
+    def getStateVolume(self, state):
+        '''
+        stack all the matices
+        :return: an input volume w*h*7
+        '''
+        matrices = []
+
+        matrices.append(self.wall_matrix)
+        matrices.append(self.getFoodMatrix(state))
+        matrices.append(self.getCapsuleMatrix(state))
+        matrices.append(self.getMyPositionMatrix(state))
+        matrices.append(self.getPacmanMatrix(state))
+        matrices.append(self.getGhostMatrix(state))
+        matrices.append(self.getScaredGhost(state))
+
+        state_volume = np.stack(matrices, axis=2)
+        assert state_volume.shape == (self.maze_dim[0], self.maze_dim[1], 7)
+        return state_volume
+
+    def getActionIndex(self, direction):
+        if direction == Directions.STOP: return 0.
+        elif direction == Directions.NORTH: return 1.
+        elif direction == Directions.SOUTH: return 2.
+        elif direction == Directions.WEST: return 3.
+        elif direction == Directions.EAST: return 4.
+        else: return 0
+
+    def getDirection(self, action_index):
+        if action_index == 0.: return Directions.STOP
+        elif action_index == 1.: return Directions.NORTH
+        elif action_index == 3.: return Directions.SOUTH
+        elif action_index == 4.: return Directions.WEST
+        elif action_index == 5.: return Directions.EAST
+        else: return Directions.STOP
+
+    def eligibility_trace(self, batch):
+        gamma = 0.99
+        inputs = []
+        targets = []
+        for series in batch:  # series --> one history containing n steps
+            input = np.array([series[0].state, series[-1].state], dtype=np.float32)
+            output = self.controller.brain.forward(input)
+            cumulated_reward = np.max(output[1])
+            for step in reversed(series[:-1]):
+                cumulated_reward = step.reward + gamma * cumulated_reward
+            state = series[0].state
+            target = output[0].data
+            target[series[0].action] = cumulated_reward
+            inputs.append(state)
+            targets.append(target)
+        return np.array(inputs, dtype=np.float32), np.array(targets, dtype=np.float32)
+
+    def train(self):
+        print("=============Episode{}==============".format(self.controller.brain.numTrained+1))
+        print("Start training... ReplayMemory size: {}".format(len(self.memory.buffer)))
+        epochs = round(len(self.memory.buffer)/32) + 1
+        for i in range(epochs):
+            for batch in self.memory.sample_batch(32):  # batch size is 32
+                inputs, targets = self.eligibility_trace(batch)  # input should be tensors
+                # print("inputs shape: {},  targets shape: {}".format(inputs.shape, targets.shape))
+                self.controller.brain.batch_learn(inputs, targets)
+        step_average = np.mean(self.n_steps.rewards)
+        print("Episode: %s,   Step Average Reward: %s" % (str(i), str(step_average)))
+        self.controller.brain.save(replace=True)
 
 
 class InvaderConvDQN(BasicAgentConvDQN):
@@ -589,7 +756,9 @@ class InvaderConvDQN(BasicAgentConvDQN):
         6. eaten an opponents +0.8
         7. lose a game: -100
     """
-    pass
+    def calculateRewardForPrevAction(self, gameState):
+        return np.random.randint(-20, 20)
+
 
 class DefenderConvDQN(BasicAgentConvDQN):
     """
@@ -603,5 +772,6 @@ class DefenderConvDQN(BasicAgentConvDQN):
         7. eaten an opponents +0.8
         8. lose a game: -100
     """
-    pass
+    def calculateRewardForPrevAction(self, gameState):
+        return np.random.randint(-20, 20)
 
