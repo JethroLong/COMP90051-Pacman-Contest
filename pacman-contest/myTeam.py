@@ -234,6 +234,34 @@ class DummyAgent(CaptureAgent):
                                 temp = (each[0], currPath + [each[1]], currCost + each[2])
                                 open.push(temp)
         return []
+    
+    def depthFirstSearch(self, problem, avoidCoordinate, isRed, boardWidth, wallList, opponentList):
+        for element in opponentList:
+            if element not in wallList:
+                wallList.append(element)
+        open = util.Stack()
+        initState = (problem.getStartState(), ['Stop'], 0)
+        open.push(initState)
+        closed = []
+    
+        while not open.isEmpty():
+            currState = open.pop()
+            currPos = currState[0]
+            currPath = currState[1]
+            currCost = currState[2]
+        
+            if (isRed and currPos[0] < int(boardWidth / 2)) or (not isRed and currPos[0] >= int(boardWidth / 2)):
+                return currPath[1:]
+            else:
+                closed.append(currPos)
+            if currState not in closed:
+                successors = problem.getSuccessors(currPos)
+                if len(successors) > 0:
+                    for each in successors:
+                        if each[0] not in closed and each[0] != avoidCoordinate and each[0] not in wallList:
+                            temp = (each[0], currPath + [each[1]], currCost + each[2])
+                            open.push(temp)
+        return []
 
 
 
@@ -281,7 +309,7 @@ class WaStarInvader(DummyAgent):
         for startingPoint in newStartingPoint:
             bfsProblem = PositionSearchProblem(gameState, startingPoint)
             boardWidth, boardHeight = self.getWidthandHeight(gameState)
-            path = self.breadthFirstSearch(bfsProblem, coordinate, self.red, boardWidth, self.getWallList(gameState), self.getOpponentList(gameState))
+            path = self.depthFirstSearch(bfsProblem, coordinate, self.red, boardWidth, self.getWallList(gameState), self.getOpponentList(gameState))
             if len(path) != 0:
                 number_of_escape_path += 1
             if number_of_escape_path > 1:
@@ -289,7 +317,21 @@ class WaStarInvader(DummyAgent):
         return False
     
     def chooseAction(self, gameState):
-        self.updateMode(gameState)
+    
+        scaredTime = 0
+        opponentDict = dict()
+        for opponentIndex in self.getOpponents(gameState):
+            if not gameState.getAgentState(opponentIndex).isPacman:
+                tempScaredTime = gameState.data.agentStates[opponentIndex].scaredTimer
+                opponentDict[gameState.getAgentPosition(opponentIndex)] = tempScaredTime
+                if tempScaredTime > scaredTime:
+                    scaredTime = tempScaredTime
+
+        opponentList = self.getOpponentList(gameState)
+        currentPosition = gameState.getAgentPosition(self.index)
+        closestOpponent, closestOpponentDistance = self.closestObjectUsingPosition(opponentList, currentPosition)
+        
+        self.updateMode(gameState, scaredTime, closestOpponentDistance)
         
         print("============INVADER============")
         print("Mode: " + self.mode)
@@ -297,7 +339,6 @@ class WaStarInvader(DummyAgent):
         
         foodList = self.getFood(gameState).asList()
         capsuleList = self.getCapsules(gameState)
-        opponentList = self.getOpponentList(gameState)
         opponentPacmanList = self.getOpponentPacmanList(gameState)
         print("Capsule List: " + str(capsuleList))
         print("Opponent List: " + str(opponentList))
@@ -333,12 +374,10 @@ class WaStarInvader(DummyAgent):
                         wallList.append((x, y - 1))
                         wall_grids[x][y - 1] = True
         
-        scaredTime = 0
-        for teamIndex in self.getTeam(updatedGameState):
-            if not updatedGameState.getAgentState(teamIndex).isPacman:
-                scaredTime = updatedGameState.data.agentStates[teamIndex].scaredTimer
-                break
-        if len(opponentPacmanList) != 0 and self.mode == "invader home mode" and scaredTime > 0:
+        myScaredTime = 0
+        if not updatedGameState.getAgentState(self.index).isPacman:
+            myScaredTime = updatedGameState.data.agentStates[self.index].scaredTimer
+        if len(opponentPacmanList) != 0 and self.mode == "invader home mode" and myScaredTime > 0:
             for candidateOpponentPacman in opponentPacmanList:
                 distance = self.getMazeDistance(candidateOpponentPacman, currentPosition)
                 print("Opponent Pacman " + str(candidateOpponentPacman) + "Distance: " + str(distance))
@@ -359,6 +398,7 @@ class WaStarInvader(DummyAgent):
                     if (x, y - 1) not in wallList:
                         wallList.append((x, y - 1))
                         wall_grids[x][y - 1] = True
+
         combined_wall_grid = game.Grid(grid_width, grid_height, False)
         for i in range(grid_width):
             for j in range(grid_height):
@@ -395,19 +435,49 @@ class WaStarInvader(DummyAgent):
             return actions[0]
         
         elif self.mode == "invader hunting mode" and len(opponentList) == 0:
+            foodDistanceThreshold = 8
+            goodList = []
+            for element in foodList:
+                if element not in goodList and self.getMazeDistance(currentPosition, element) < foodDistanceThreshold:
+                    goodList.append(element)
             for element in capsuleList:
-                if element not in foodList:
-                    foodList.append(element)
-            for element in opponentPacmanList:
-                if element not in foodList:
-                    foodList.append(element)
+                if element not in goodList and self.getMazeDistance(currentPosition, element) < foodDistanceThreshold:
+                    goodList.append(element)
             huntingPacmanScoreThreshold = 3
             score = self.getScore(updatedGameState)
             if score > huntingPacmanScoreThreshold:
                 for element in opponentPacmanList:
-                    if element not in foodList:
-                        foodList.append(element)
-            closestFood, distance = self.closestObject(foodList, updatedGameState)
+                    if element not in goodList and self.getMazeDistance(currentPosition, element) < foodDistanceThreshold:
+                        goodList.append(element)
+            if len(goodList) == 0:
+                print("Trigger invader retreat mode")
+                width, height = self.getWidthandHeight(updatedGameState)
+                homeWidth = int(width / 2)
+                candidateHomeList = []
+                if self.red:
+                    for i in range(1, height):
+                        if (homeWidth - 1, i) not in wallList:
+                            candidateHomeList.append((homeWidth - 1, i))
+                else:
+                    for i in range(1, height):
+                        if (homeWidth + 2, i) not in wallList:
+                            candidateHomeList.append((homeWidth + 2, i))
+                closestHome, distance = self.closestObject(candidateHomeList, updatedGameState)
+                goHomeProblem = PositionSearchProblem(updatedGameState, updatedGameState.getAgentPosition(self.index), goal=closestHome)
+                actions = wastarSearch(goHomeProblem, manhattanHeuristic)
+                self.updateScore(updatedGameState)
+                print("Goal: " + str(closestHome))
+                print("Goal Type: Closest Home")
+                if len(actions) == 0:
+                    actions.append("Stop")
+                print("Action: " + actions[0])
+                print("===============================")
+                print()
+                print()
+                updatedGameState.data.layout.walls = original_wall_grids
+                gameState = updatedGameState
+                return actions[0]
+            closestFood, distance = self.closestObject(goodList, updatedGameState)
             closestFoodProblem = PositionSearchProblem(updatedGameState, updatedGameState.getAgentPosition(self.index), goal=closestFood)
             actions = wastarSearch(closestFoodProblem, manhattanHeuristic)
             self.updateScore(updatedGameState)
@@ -432,8 +502,35 @@ class WaStarInvader(DummyAgent):
                 if self.isSafeCoordinate(foodCoordinate, updatedGameState):
                     safeList.append(foodCoordinate)
             for capsuleCoordinate in capsuleList:
-                if self.isSafeCoordinate(capsuleCoordinate, updatedGameState):
-                    safeList.append(capsuleCoordinate)
+                safeList.append(capsuleCoordinate)
+            if len(safeList) == 0:
+                print("Trigger invader retreat mode")
+                width, height = self.getWidthandHeight(updatedGameState)
+                homeWidth = int(width / 2)
+                candidateHomeList = []
+                if self.red:
+                    for i in range(1, height):
+                        if (homeWidth - 1, i) not in wallList:
+                            candidateHomeList.append((homeWidth - 1, i))
+                else:
+                    for i in range(1, height):
+                        if (homeWidth + 2, i) not in wallList:
+                            candidateHomeList.append((homeWidth + 2, i))
+                closestHome, distance = self.closestObject(candidateHomeList, updatedGameState)
+                goHomeProblem = PositionSearchProblem(updatedGameState, updatedGameState.getAgentPosition(self.index), goal=closestHome)
+                actions = wastarSearch(goHomeProblem, manhattanHeuristic)
+                self.updateScore(updatedGameState)
+                print("Goal: " + str(closestHome))
+                print("Goal Type: Closest Home")
+                if len(actions) == 0:
+                    actions.append("Stop")
+                print("Action: " + actions[0])
+                print("===============================")
+                print()
+                print()
+                updatedGameState.data.layout.walls = original_wall_grids
+                gameState = updatedGameState
+                return actions[0]
             closestSafe, distance = self.closestObject(safeList, updatedGameState)
             if closestSafe is not None:
                 closestFoodProblem = PositionSearchProblem(updatedGameState, updatedGameState.getAgentPosition(self.index), goal=closestSafe)
@@ -444,12 +541,12 @@ class WaStarInvader(DummyAgent):
                 candidateHomeList = []
                 if self.red:
                     for i in range(1, height):
-                        if (homeWidth, i) not in wallList:
-                            candidateHomeList.append((homeWidth, i))
+                        if (homeWidth - 1, i) not in wallList:
+                            candidateHomeList.append((homeWidth - 1, i))
                 else:
                     for i in range(1, height):
-                        if (homeWidth + 1, i) not in wallList:
-                            candidateHomeList.append((homeWidth + 1, i))
+                        if (homeWidth + 2, i) not in wallList:
+                            candidateHomeList.append((homeWidth + 2, i))
                 closestHome, distance = self.closestObject(candidateHomeList, updatedGameState)
                 goHomeProblem = PositionSearchProblem(updatedGameState, updatedGameState.getAgentPosition(self.index), goal=closestHome)
                 actions = wastarSearch(goHomeProblem, manhattanHeuristic)
@@ -475,8 +572,9 @@ class WaStarInvader(DummyAgent):
             for element in capsuleList:
                 if element not in foodList:
                     foodList.append(element)
+            scaredTimerCountingDownThreshold = 5
             for element in opponentList:
-                if element not in foodList:
+                if element not in foodList and opponentDict[element] >= scaredTimerCountingDownThreshold:
                     foodList.append(element)
             # huntingPacmanScoreThreshold = 5
             # score = self.getScore(updatedGameState)
@@ -484,6 +582,34 @@ class WaStarInvader(DummyAgent):
             #     for element in opponentPacmanList:
             #         if element not in foodList:
             #             foodList.append(element)
+            if len(foodList) == 0:
+                print("Trigger invader retreat mode")
+                width, height = self.getWidthandHeight(updatedGameState)
+                homeWidth = int(width / 2)
+                candidateHomeList = []
+                if self.red:
+                    for i in range(1, height):
+                        if (homeWidth - 1, i) not in wallList:
+                            candidateHomeList.append((homeWidth - 1, i))
+                else:
+                    for i in range(1, height):
+                        if (homeWidth + 2, i) not in wallList:
+                            candidateHomeList.append((homeWidth + 2, i))
+                closestHome, distance = self.closestObject(candidateHomeList, updatedGameState)
+                goHomeProblem = PositionSearchProblem(updatedGameState, updatedGameState.getAgentPosition(self.index), goal=closestHome)
+                actions = wastarSearch(goHomeProblem, manhattanHeuristic)
+                self.updateScore(updatedGameState)
+                print("Goal: " + str(closestHome))
+                print("Goal Type: Closest Home")
+                if len(actions) == 0:
+                    actions.append("Stop")
+                print("Action: " + actions[0])
+                print("===============================")
+                print()
+                print()
+                updatedGameState.data.layout.walls = original_wall_grids
+                gameState = updatedGameState
+                return actions[0]
             closestFood, distance = self.closestObject(foodList, updatedGameState)
             closestFoodProblem = PositionSearchProblem(updatedGameState, updatedGameState.getAgentPosition(self.index), goal=closestFood)
             actions = wastarSearch(closestFoodProblem, manhattanHeuristic)
@@ -518,12 +644,12 @@ class WaStarInvader(DummyAgent):
             candidateHomeList = []
             if self.red:
                 for i in range(1, height):
-                    if (homeWidth, i) not in wallList:
-                        candidateHomeList.append((homeWidth, i))
+                    if (homeWidth - 1, i) not in wallList:
+                        candidateHomeList.append((homeWidth - 1, i))
             else:
                 for i in range(1, height):
-                    if (homeWidth + 1, i) not in wallList:
-                        candidateHomeList.append((homeWidth + 1, i))
+                    if (homeWidth + 2, i) not in wallList:
+                        candidateHomeList.append((homeWidth + 2, i))
             closestHome, distance = self.closestObject(candidateHomeList, updatedGameState)
             goHomeProblem = PositionSearchProblem(updatedGameState, updatedGameState.getAgentPosition(self.index), goal=closestHome)
             actions = wastarSearch(goHomeProblem, manhattanHeuristic)
@@ -551,7 +677,7 @@ class WaStarInvader(DummyAgent):
                 print(gameState.data.agentStates[opponentIndex].scaredTimer)
     """
     
-    def updateMode(self, gameState):
+    def updateMode(self, gameState, scaredTime, closestOpponentDistance):
         boardWidth, boardHeight = self.getWidthandHeight(gameState)
         currentPosition = gameState.getAgentPosition(self.index)
 
@@ -568,23 +694,17 @@ class WaStarInvader(DummyAgent):
             if gameState.data._capsuleEaten is not None:
                 self.mode = "invader power mode"
                 return
-            scaredTime = 0
-            for opponentIndex in self.getOpponents(gameState):
-                if not gameState.getAgentState(opponentIndex).isPacman:
-                    scaredTime = gameState.data.agentStates[opponentIndex].scaredTimer
-                    break
-            if gameState.data._capsuleEaten is None and scaredTime > 0:
+            scaredTimerCountingDownThreshold = 5
+            if gameState.data._capsuleEaten is None and scaredTime >= scaredTimerCountingDownThreshold:
                 self.mode = "invader power mode"
                 return
-            if gameState.data._capsuleEaten is None and scaredTime == 0:
+            if gameState.data._capsuleEaten is None and scaredTime < scaredTimerCountingDownThreshold:
                 self.mode = "invader hunting mode"
             escapeDistanceThreshold = 3
             escapeScoreThreshold = 0
-            opponentList = self.getOpponentList(gameState)
-            closestOpponent, closestOpponentDistance = self.closestObjectUsingPosition(opponentList, currentPosition)
             if closestOpponentDistance <= escapeDistanceThreshold:
                 currentScore = self.getScore(gameState)
-                if (currentScore > escapeScoreThreshold and self.red) or (currentScore < escapeScoreThreshold and not self.red):
+                if (currentScore > escapeScoreThreshold and self.red) or (currentScore < -1 * escapeScoreThreshold and not self.red):
                     self.mode = "invader retreat mode"
                 else:
                     self.mode = "invader hunting mode"
