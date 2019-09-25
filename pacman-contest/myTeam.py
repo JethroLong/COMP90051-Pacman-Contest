@@ -339,6 +339,9 @@ class WaStarInvader(DummyAgent):
         Decide whether the given coordinate is safe or not,
         i.e. whether there exists at least two ways back home.
         """
+        wallList = gameState.getWalls().asList()
+        if coordinate in wallList:
+            return False
         x, y = coordinate[0], coordinate[1]
         legalAction = self.getLegalActionOfPosition(coordinate, gameState)
         if len(legalAction) <= 1:
@@ -377,7 +380,7 @@ class WaStarInvader(DummyAgent):
         for opponentIndex in self.getOpponents(gameState):
             if not gameState.getAgentState(opponentIndex).isPacman:
                 tempScaredTime = gameState.data.agentStates[opponentIndex].scaredTimer
-                opponentDict[gameState.getAgentPosition(opponentIndex)] = tempScaredTime
+                opponentDict[(opponentIndex, gameState.getAgentPosition(opponentIndex))] = tempScaredTime
                 if tempScaredTime > scaredTime:
                     scaredTime = tempScaredTime
 
@@ -412,26 +415,27 @@ class WaStarInvader(DummyAgent):
         if len(opponentList) != 0 and numberOfScaredGhost != len(list(opponentDict.keys())):
             print("Number of Opponent Around Me: " + str(len(opponentList)))
             for candidateOpponent in opponentList:
-                if opponentDict[candidateOpponent] == 0:
-                    distance = self.getMazeDistance(candidateOpponent, currentPosition)
-                    print("Opponent " + str(candidateOpponent) + " Distance: " + str(distance))
-                    if candidateOpponent not in wallList:
-                        wallList.append(candidateOpponent)
-                        wall_grids[candidateOpponent[0]][candidateOpponent[1]] = True
-                    if distance <= 2:
-                        x, y = candidateOpponent[0], candidateOpponent[1]
-                        if (x + 1, y) not in wallList:
-                            wallList.append((x + 1, y))
-                            wall_grids[x + 1][y] = True
-                        if (x - 1, y) not in wallList:
-                            wallList.append((x - 1, y))
-                            wall_grids[x - 1][y] = True
-                        if (x, y + 1) not in wallList:
-                            wallList.append((x, y + 1))
-                            wall_grids[x][y + 1] = True
-                        if (x, y - 1) not in wallList:
-                            wallList.append((x, y - 1))
-                            wall_grids[x][y - 1] = True
+                for key in opponentDict:
+                    if candidateOpponent == key[1] and opponentDict[key] == 0:
+                        distance = self.getMazeDistance(candidateOpponent, currentPosition)
+                        print("Opponent " + str(candidateOpponent) + " Distance: " + str(distance))
+                        if candidateOpponent not in wallList:
+                            wallList.append(candidateOpponent)
+                            wall_grids[candidateOpponent[0]][candidateOpponent[1]] = True
+                        if distance <= 2:
+                            x, y = candidateOpponent[0], candidateOpponent[1]
+                            if (x + 1, y) not in wallList:
+                                wallList.append((x + 1, y))
+                                wall_grids[x + 1][y] = True
+                            if (x - 1, y) not in wallList:
+                                wallList.append((x - 1, y))
+                                wall_grids[x - 1][y] = True
+                            if (x, y + 1) not in wallList:
+                                wallList.append((x, y + 1))
+                                wall_grids[x][y + 1] = True
+                            if (x, y - 1) not in wallList:
+                                wallList.append((x, y - 1))
+                                wall_grids[x][y - 1] = True
         
         myScaredTime = 0
         if not updatedGameState.getAgentState(self.index).isPacman:
@@ -586,14 +590,28 @@ class WaStarInvader(DummyAgent):
                 print("Goal: " + str(closestHome))
                 print("Goal Type: Closest Home")
                 if len(actions) == 0:
-                    actions.append("Stop")
-                print("Action: " + actions[0])
+                    # actions.append("Stop")
+                    # Don't Stop, stop is the most stupidest move
+                    actions = []
+                    x, y = currentPosition[0], currentPosition[1]
+                    if (x + 1, y) not in wallList:
+                        actions.append("East")
+                    if (x - 1, y) not in wallList:
+                        actions.append("West")
+                    if (x, y + 1) not in wallList:
+                        actions.append("North")
+                    if (x, y - 1) not in wallList:
+                        actions.append("South")
+                    selectedAction = random.choice(actions)
+                else:
+                    selectedAction = actions[0]
+                print("Action: " + selectedAction)
                 print("===============================")
                 print()
                 print()
                 updatedGameState.data.layout.walls = original_wall_grids
                 gameState = updatedGameState
-                return actions[0]
+                return selectedAction
             closestSafe, distance = self.closestObject(safeList, updatedGameState)
             if closestSafe is not None:
                 closestFoodProblem = PositionSearchProblem(updatedGameState, updatedGameState.getAgentPosition(self.index), goal=closestSafe)
@@ -632,20 +650,25 @@ class WaStarInvader(DummyAgent):
             return actions[0]
         
         elif self.mode == "invader power mode":
+            goodList = []
+            for element in foodList:
+                if element not in goodList:
+                    goodList.append(element)
             for element in capsuleList:
-                if element not in foodList:
-                    foodList.append(element)
+                if element not in goodList and element not in wallList:
+                    goodList.append(element)
             scaredTimerCountingDownThreshold = 5
             for element in opponentList:
-                if element not in foodList and opponentDict[element] >= scaredTimerCountingDownThreshold:
-                    foodList.append(element)
+                for key in opponentDict:
+                    if element == key[1] and element not in wallList and opponentDict[key] >= scaredTimerCountingDownThreshold and element not in goodList:
+                        goodList.append(element)
             # huntingPacmanScoreThreshold = 5
             # score = self.getScore(updatedGameState)
             # if score > huntingPacmanScoreThreshold:
             #     for element in opponentPacmanList:
             #         if element not in foodList:
             #             foodList.append(element)
-            if len(foodList) == 0:
+            if len(goodList) == 0:
                 print("Trigger invader retreat mode")
                 width, height = self.getWidthandHeight(updatedGameState)
                 homeWidth = int(width / 2)
@@ -673,7 +696,7 @@ class WaStarInvader(DummyAgent):
                 updatedGameState.data.layout.walls = original_wall_grids
                 gameState = updatedGameState
                 return actions[0]
-            closestFood, distance = self.closestObject(foodList, updatedGameState)
+            closestFood, distance = self.closestObject(goodList, updatedGameState)
             closestFoodProblem = PositionSearchProblem(updatedGameState, updatedGameState.getAgentPosition(self.index), goal=closestFood)
             actions = wastarSearch(closestFoodProblem, manhattanHeuristic)
             self.updateScore(updatedGameState)
