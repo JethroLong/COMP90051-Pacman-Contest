@@ -741,10 +741,12 @@ class WaStarInvader(DummyAgent):
                 if element not in goodList and element not in wallList:
                     goodList.append(element)
             scaredTimerCountingDownThreshold = 5
+            scaredOpponentGhostDistance = 1
             for element in opponentList:
                 for key in opponentDict:
                     if element == key[1] and element not in wallList and opponentDict[key] >= scaredTimerCountingDownThreshold and element not in goodList:
-                        goodList.append(element)
+                        if self.getMazeDistance(currentPosition, element) <= scaredOpponentGhostDistance:
+                            goodList.append(element)
             # huntingPacmanScoreThreshold = 5
             # score = self.getScore(updatedGameState)
             # if score > huntingPacmanScoreThreshold:
