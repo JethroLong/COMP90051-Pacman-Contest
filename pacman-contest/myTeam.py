@@ -10,7 +10,7 @@
 # (denero@cs.berkeley.edu) and Dan Klein (klein@cs.berkeley.edu).
 # Student side autograding was added by Brad Miller, Nick Hay, and
 # Pieter Abbeel (pabbeel@cs.berkeley.edu).
-
+import sys
 
 from captureAgents import CaptureAgent
 import random, time, util
@@ -23,755 +23,1328 @@ import re, os
 #################
 # Team creation #
 #################
+from graphicsDisplay import InfoPane
+
 
 def createTeam(firstIndex, secondIndex, isRed,
-               first = 'InvaderConvDQN', second = 'DefenderConvDQN', **kwargs):
-  """
-  This function should return a list of two agents that will form the
-  team, initialized using firstIndex and secondIndex as their agent
-  index numbers.  isRed is True if the red team is being created, and
-  will be False if the blue team is being created.
-
-  As a potentially helpful development aid, this function can take
-  additional string-valued keyword arguments ("first" and "second" are
-  such arguments in the case of this function), which will come from
-  the --redOpts and --blueOpts command-line arguments to capture.py.
-  For the nightly contest, however, your team will be created without
-  any extra arguments, so you should make sure that the default
-  behavior is what you want for the nightly contest.
-  """
-
-  # The following line is an example only; feel free to change it.
-  return [eval(first)(firstIndex), eval(second)(secondIndex)]
+               first = 'WaStarInvader', second = 'WaStarDefender'):
+    """
+    This function should return a list of two agents that will form the
+    team, initialized using firstIndex and secondIndex as their agent
+    index numbers.  isRed is True if the red team is being created, and
+    will be False if the blue team is being created.
+  
+    As a potentially helpful development aid, this function can take
+    additional string-valued keyword arguments ("first" and "second" are
+    such arguments in the case of this function), which will come from
+    the --redOpts and --blueOpts command-line arguments to capture.py.
+    For the nightly contest, however, your team will be created without
+    any extra arguments, so you should make sure that the default
+    behavior is what you want for the nightly contest.
+    """
+    
+    # The following line is an example only; feel free to change it.
+    return [eval(first)(firstIndex), eval(second)(secondIndex)]
 
 ##########
 # Agents #
 ##########
 
 class DummyAgent(CaptureAgent):
-  """
-  A Dummy agent to serve as an example of the necessary agent structure.
-  You should look at baselineTeam.py for more details about how to
-  create an agent as this is the bare minimum.
-  """
-
-  def registerInitialState(self, gameState):
+    
     """
-    This method handles the initial setup of the
-    agent to populate useful fields (such as what team
-    we're on).
-
-    A distanceCalculator instance caches the maze distances
-    between each pair of positions, so your agents can use:
-    self.distancer.getDistance(p1, p2)
-
-    IMPORTANT: This method may run for at most 15 seconds.
+    A Dummy agent to serve as an example of the necessary agent structure.
+    You should look at baselineTeam.py for more details about how to
+    create an agent as this is the bare minimum.
     """
+    
+    mode = ""
+    # invader home mode, invader hunting mode, invader power mode, invader rereat mode
+    
+    def registerInitialState(self, gameState):
+        """
+        This method handles the initial setup of the
+        agent to populate useful fields (such as what team
+        we're on).
+    
+        A distanceCalculator instance caches the maze distances
+        between each pair of positions, so your agents can use:
+        self.distancer.getDistance(p1, p2)
+    
+        IMPORTANT: This method may run for at most 15 seconds.
+        """
+        '''
+        Make sure you do not delete the following line. If you would like to
+        use Manhattan distances instead of maze distances in order to save
+        on initialization time, please take a look at
+        CaptureAgent.registerInitialState in captureAgents.py.
+        '''
+        self.start = gameState.getAgentPosition(self.index)
+        CaptureAgent.registerInitialState(self, gameState)
+        '''
+        Your initialization code goes here, if you need any.
+        '''
+    
+    def chooseAction(self, gameState):
+        pass
+    
+    def getSuccessor(self, gameState, action):
+        successor = gameState.generateSuccessor(self.index, action)
+        position = successor.getAgentState(self.index).getPosition()
+        if position != util.nearestPoint(position):
+            return successor.generateSuccessor(self.index, action)
+        else:
+            return successor
+    
+    def getFeatures(self, gameState, action):
+        pass
+    
+    def getWeights(self, gameState, action):
+        pass
+    
+    def evaluate(self, gameState, action):
+        pass
+    
+    def getWidthandHeight(self, gameState):
+        width = gameState.data.layout.width
+        height = gameState.data.layout.height
+        return width, height
+    
+    def getHome(self, gameState):
+        width = gameState.data.layout.width
+        if self.red:
+            return int(width / 2), "<"
+        else:
+            return int(width / 2), ">="
+        
+    def getFoodXCoordinateClosestToBorder(self, gameState):
+        foodList = self.getFood(gameState).asList()
+        if self.red:
+            x = sys.maxsize
+        else:
+            x = -1 * sys.maxsize + 1
+        for foodCoordinate in foodList:
+            if self.red:
+                if foodCoordinate[0] < x:
+                    x = foodCoordinate[0]
+            else:
+                if foodCoordinate[0] > x:
+                    x = foodCoordinate[0]
+        return x
+    
+    def getWallList(self, gameState):
+        return gameState.getWalls().asList()
+    
+    def getOpponentList(self, gameState):
+        opponentList = []
+        for opponentIndex in self.getOpponents(gameState):
+            opponentPosition = gameState.getAgentPosition(opponentIndex)
+            if not gameState.getAgentState(opponentIndex).isPacman and opponentPosition is not None:
+                opponentList.append(opponentPosition)
+        return opponentList
+    
+    def getOpponentPacmanList(self, gameState):
+        opponentPacmanList = []
+        for opponentIndex in self.getOpponents(gameState):
+            opponentPacmanPosition = gameState.getAgentPosition(opponentIndex)
+            if gameState.getAgentState(opponentIndex).isPacman and opponentPacmanPosition is not None:
+                opponentPacmanList.append(opponentPacmanPosition)
+        return opponentPacmanList
+    
+    def getFoodList(self, gameState):
+        return self.getFood(gameState).asList()
+    
+    def getCapsuleList(self, gameState):
+        capsuleList = self.getCapsules(gameState)
+        notNoneCapsuleList = []
+        for capsule in capsuleList:
+            if capsule is not None:
+                notNoneCapsuleList.append(capsule)
+        return notNoneCapsuleList
+    
+    def getLegalActionOfPosition(self, coordinate, gameState):
+        legalAction = []
+        x = coordinate[0]
+        y = coordinate[1]
+        wallList = gameState.getWalls().asList()
+        opponentList = []
+        for opponentIndex in self.getOpponents(gameState):
+            opponentPosition = gameState.getAgentPosition(opponentIndex)
+            if not gameState.getAgentState(opponentIndex).isPacman and opponentPosition is not None:
+                opponentList.append(opponentPosition)
+        if (x, y + 1) not in wallList and (x, y + 1) not in opponentList:
+            legalAction.append("North")
+        if (x, y - 1) not in wallList and (x, y - 1) not in opponentList:
+            legalAction.append("South")
+        if (x - 1, y) not in wallList and (x - 1, y) not in opponentList:
+            legalAction.append("West")
+        if (x + 1, y) not in wallList and (x + 1, y) not in opponentList:
+            legalAction.append("East")
+        if (x, y + 1) not in opponentList and (x, y - 1) not in opponentList and (x + 1, y) not in opponentList and (x - 1, y) not in opponentList:
+            legalAction.append("Stop")
+        return legalAction
+        
+    
+    def closestObject(self, listOfObjects, gameState):
+        currentPosition = gameState.getAgentPosition(self.index)
+        closestObj = None
+        closestDistance = sys.maxsize
+        for candidateObject in listOfObjects:
+            distance = self.getMazeDistance(candidateObject, currentPosition)
+            if distance < closestDistance:
+                closestDistance = distance
+                closestObj = candidateObject
+        return closestObj, closestDistance
+    
+    def closestObjectUsingPosition(self, listOfObjects, currentPosition):
+        closestObj = None
+        closestDistance = sys.maxsize
+        for candidateObject in listOfObjects:
+            distance = self.getMazeDistance(candidateObject, currentPosition)
+            if distance < closestDistance:
+                closestDistance = distance
+                closestObj = candidateObject
+        return closestObj, closestDistance
 
-    '''
-    Make sure you do not delete the following line. If you would like to
-    use Manhattan distances instead of maze distances in order to save
-    on initialization time, please take a look at
-    CaptureAgent.registerInitialState in captureAgents.py.
-    '''
-    self.start = gameState.getAgentPosition(self.index)
-    CaptureAgent.registerInitialState(self, gameState)
+    def farthestObjectUsingPosition(self, listOfObjects, currentPosition):
+        farthestObj = None
+        farthestDistance = -1 * sys.maxsize
+        for candidateObject in listOfObjects:
+            distance = self.getMazeDistance(candidateObject, currentPosition)
+            if distance > farthestDistance:
+                farthestObj = candidateObject
+                farthestDistance = distance
+        return farthestObj, farthestDistance
 
-    '''
-    Your initialization code goes here, if you need any.
-    '''
+    def breadthFirstSearch(self, problem, avoidCoordinate, isRed, boardWidth, wallList, opponentList):
+        
+        for element in opponentList:
+            if element not in wallList:
+                wallList.append(element)
+        
+        open = util.Queue()
+        init = (problem.getStartState(), ['Stop'], 0)
+        open.push(init)
+        closed = []
+        while not open.isEmpty():
+            currNode = open.pop()
+            currState = currNode[0]
+            currPath = currNode[1]
+            currCost = currNode[2]
+            if (isRed and currState[0] < int(boardWidth / 2)) or (not isRed and currState[0] >= int(boardWidth / 2)):
+                return currPath[1:]
+            else:
+                if currState not in closed:
+                    closed.append(currState)
+                    successors = problem.getSuccessors(currState)
+                    if len(successors) > 0:
+                        for each in successors:
+                            if each[0] not in closed and each[0] != avoidCoordinate and each[0] not in wallList:
+                                temp = (each[0], currPath + [each[1]], currCost + each[2])
+                                open.push(temp)
+        return []
+    
+    def depthFirstSearch(self, problem, avoidCoordinate, isRed, boardWidth, wallList, opponentList):
+        
+        for element in opponentList:
+            if element not in wallList:
+                wallList.append(element)
+        
+        open = util.Stack()
+        initState = (problem.getStartState(), ['Stop'], 0)
+        open.push(initState)
+        closed = []
+    
+        while not open.isEmpty():
+            currState = open.pop()
+            currPos = currState[0]
+            currPath = currState[1]
+            currCost = currState[2]
+        
+            if (isRed and currPos[0] < int(boardWidth / 2)) or (not isRed and currPos[0] >= int(boardWidth / 2)):
+                return currPath[1:]
+            else:
+                closed.append(currPos)
+            if currState not in closed:
+                successors = problem.getSuccessors(currPos)
+                if len(successors) > 0:
+                    for each in successors:
+                        if each[0] not in closed and each[0] != avoidCoordinate and each[0] not in wallList:
+                            temp = (each[0], currPath + [each[1]], currCost + each[2])
+                            open.push(temp)
+        return []
+
+    def depthFirstSearchCycleDetecter(self, problem):
+        
+        open = util.Stack()
+        initState = (problem.getStartState(), ['Stop'], 0)
+        open.push(initState)
+        closed = []
+        initial = True
+        while not open.isEmpty():
+            currState = open.pop()
+            currPos = currState[0]
+            currPath = currState[1]
+            currCost = currState[2]
+        
+            if currPos == problem.startState and not initial:
+                return True
+            else:
+                if initial:
+                    initial = False
+                closed.append(currPos)
+            if currState not in closed:
+                successors = problem.getSuccessors(currPos)
+                if len(successors) > 0:
+                    for each in successors:
+                        if each[0] not in closed:
+                            temp = (each[0], currPath + [each[1]], currCost + each[2])
+                            open.push(temp)
+        return False
 
 
-  def chooseAction(self, gameState):
-    """
-    Picks among actions randomly.
-    This part implements the chosen algorithm acutually  -- tech 1: heuristic search wastar
-    """
-    # chosen from ['North', 'South', 'West', 'East', 'Stop']
-    actions = gameState.getLegalActions(self.index)
 
-    for action in actions:
-      succ = self.getSuccessor(gameState, action)
-
-      # evaluate the one successor, as this is not a path-finding task, it should be
-      # "real-time", thus the algorithm should determine which is the best move among
-      # five possible actions
-
-    '''
-    You should change this in your own agent.
-    '''
-    return random.choice(actions)
-
-  def getSuccessor(self, gameState, action):
-
-    successor = gameState.generateSuccessor(self.index, action)
-    position = successor.getAgentState(self.index).getPosition()
-    if position != util.nearestPoint(position):
-      return successor.generateSuccessor(self.index, action)
-    else:
-      return successor
-
-
-  def evaluate(self, gameState, action):
-    features = self.getFeatures(gameState, action)
-    weights = self.getWeights(gameState, action)
-    return features * weights
 
 ######################################
 #            WA* Agents
 ######################################
+
+
 class WaStarInvader(DummyAgent):
-  """
-  Invader Behavior design:
-    1. Head straight to opponent's territory (priority: High)
-    2.
-      * Power mode: AllFoodSearch problem
-          - current score > threshold (acceptable score??) && scared_time < 30 ?? :
-                  P(chase scared ghosts) >> P(eat food)
-          - current score < threshold:
-                ignore scared ghosts and go straight for food
-                  P(chase scared ghosts) << P(eat food)
-      * Normal mode: search food & capsules, avoid ghosts
-            P(avoid ghost) >> P(eat capsule) > P(eat food)
-    3. Score difference:
-      * myteam_score + opponent_score >= higher_threshold > 0:
-                    Highly Advantaged --> Defend First
-      * lower_threshold < myteam_score + opponent_score < higher_threshold:
-                    Balanced --> Keep Invading
-      * myteam_score + opponent_score <= lower_threshold:
-                    Highly Disadvantaged --> Give-up Defending
+    
+    """
+    invader home mode
+    invader hunting mode
+    invader power mode
+    invader retreat mode
+    """
+    
+    """
+    def isRoadBlockingCapsule(self, coordinate, gameState):
+    
+        # Decide whether the given capsule blocks the road to reach certain food,
+        # i.e. whether this capsule forms a cycle with walls.
+        
+        tempGameState = gameState.deepCopy()
+        grid_width, grid_height = self.getWidthandHeight(gameState)
+        wall_grids = gameState.getWalls().data
+        capsuleList = self.getCapsules(gameState)
+        notNoneCapsuleList = []
+        for capsule in capsuleList:
+            if capsule is not None:
+                notNoneCapsuleList.append(capsule)
+        for element in notNoneCapsuleList:
+            if element != coordinate:
+                wall_grids[element[0]][element[1]] = True
+        temp_combined_wall_grid = game.Grid(grid_width, grid_height, False)
+        for i in range(grid_width):
+            for j in range(grid_height):
+                temp_combined_wall_grid.data[i][j] = not wall_grids[i][j]
+        tempGameState.data.layout.walls = temp_combined_wall_grid
+        
+        dfsProblem = PositionSearchProblem(tempGameState, coordinate)
+        boardWidth, boardHeight = self.getWidthandHeight(tempGameState)
+        return self.depthFirstSearchCycleDetecter(dfsProblem)
+    """
+    
+    def isSafeCoordinate(self, coordinate, gameState):
+        """
+        Decide whether the given coordinate is safe or not,
+        i.e. whether there exists at least two ways back home.
+        """
+        wallList = gameState.getWalls().asList()
+        if coordinate in wallList:
+            return False
+        x, y = coordinate[0], coordinate[1]
+        legalAction = self.getLegalActionOfPosition(coordinate, gameState)
+        if len(legalAction) <= 1:
+            return False
+        if len(legalAction) == 2 and "Stop" in legalAction:
+            return False
+        nonStopLegalAction = []
+        for action in legalAction:
+            if action != "Stop":
+                nonStopLegalAction.append(action)
+        newStartingPoint = []
+        for action in nonStopLegalAction:
+            if action == "East":
+                newStartingPoint.append((x + 1, y))
+            elif action == "West":
+                newStartingPoint.append((x - 1, y))
+            elif action == "North":
+                newStartingPoint.append((x, y + 1))
+            elif action == "South":
+                newStartingPoint.append((x, y - 1))
+        number_of_escape_path = 0
+        for startingPoint in newStartingPoint:
+            bfsProblem = PositionSearchProblem(gameState, startingPoint)
+            boardWidth, boardHeight = self.getWidthandHeight(gameState)
+            path = self.depthFirstSearch(bfsProblem, coordinate, self.red, boardWidth, self.getWallList(gameState), self.getOpponentList(gameState))
+            if len(path) != 0:
+                number_of_escape_path += 1
+            if number_of_escape_path > 1:
+                return True
+        return False
+    
+    def chooseAction(self, gameState):
+    
+        scaredTime = 0
+        opponentDict = dict()
+        numberOfScaredGhost = 0
+        for opponentIndex in self.getOpponents(gameState):
+            if not gameState.getAgentState(opponentIndex).isPacman:
+                tempScaredTime = gameState.data.agentStates[opponentIndex].scaredTimer
+                opponentDict[(opponentIndex, gameState.getAgentPosition(opponentIndex))] = tempScaredTime
+                if tempScaredTime > 0:
+                    numberOfScaredGhost += 1
+                if tempScaredTime > scaredTime:
+                    scaredTime = tempScaredTime
 
-  """
-  def chooseAction(self, gameState):
-    pass
+        opponentList = self.getOpponentList(gameState)
+        currentPosition = gameState.getAgentPosition(self.index)
+        closestOpponent, closestOpponentDistance = self.closestObjectUsingPosition(opponentList, currentPosition)
+        
+        self.updateMode(gameState, scaredTime, closestOpponentDistance)
+        
+        print("============INVADER============")
+        print("Mode: " + self.mode)
+        print("Position: " + str(gameState.getAgentPosition(self.index)))
+        
+        foodList = self.getFood(gameState).asList()
+        capsuleList = self.getCapsules(gameState)
+        opponentPacmanList = self.getOpponentPacmanList(gameState)
+        print("Capsule List: " + str(capsuleList))
+        print("Opponent List: " + str(opponentList))
+        print("Opponent Pacman List: " + str(opponentPacmanList))
+        if closestOpponent is not None:
+            print("Closest Opponent Ghost: " + str(closestOpponent) + ": " + str(closestOpponentDistance))
+        
+        wallList = self.getWallList(gameState)
+        original_wall_grids = gameState.data.layout.walls
+        updatedGameState = gameState.deepCopy()
+        grid_width, grid_height = self.getWidthandHeight(gameState)
+        wall_grids = gameState.getWalls().data
+        
+        # DETECT OPPONENT AROUND ME
+        if len(opponentList) != 0 and numberOfScaredGhost != len(list(opponentDict.keys())):
+            # There are ghosts around me, and at least one of them is not scared.
+            print("Number of Opponent Around Me: " + str(len(opponentList)))
+            print("Number of Scared Opponent Around Me: " + str(numberOfScaredGhost))
+            for candidateOpponent in opponentList:
+                for key in opponentDict:
+                    if candidateOpponent == key[1] and opponentDict[key] == 0:
+                        distance = self.getMazeDistance(candidateOpponent, currentPosition)
+                        print("Not Scared Opponent " + str(candidateOpponent) + " Distance: " + str(distance))
+                        if candidateOpponent not in wallList:
+                            wallList.append(candidateOpponent)
+                            wall_grids[candidateOpponent[0]][candidateOpponent[1]] = True
+                        considerGhostSurroundingAreaDistanceThreshold = 2
+                        if distance <= considerGhostSurroundingAreaDistanceThreshold:
+                            # Right now, consider 4 surrounding cells as wall
+                            # Can also consider all 8 surrounding cells as wall # IDEA
+                            x, y = candidateOpponent[0], candidateOpponent[1]
+                            if (x + 1, y) not in wallList:
+                                wallList.append((x + 1, y))
+                                wall_grids[x + 1][y] = True
+                            if (x - 1, y) not in wallList:
+                                wallList.append((x - 1, y))
+                                wall_grids[x - 1][y] = True
+                            if (x, y + 1) not in wallList:
+                                wallList.append((x, y + 1))
+                                wall_grids[x][y + 1] = True
+                            if (x, y - 1) not in wallList:
+                                wallList.append((x, y - 1))
+                                wall_grids[x][y - 1] = True
+        
+        myScaredTime = 0 # used if I am a ghost at home territory.
+        if not updatedGameState.getAgentState(self.index).isPacman:
+            myScaredTime = updatedGameState.data.agentStates[self.index].scaredTimer
+        
+        if len(opponentPacmanList) != 0 and self.mode == "invader home mode" and myScaredTime > 0:
+            print("My Scared Timer: " + str(myScaredTime))
+            for candidateOpponentPacman in opponentPacmanList:
+                distance = self.getMazeDistance(candidateOpponentPacman, currentPosition)
+                print("Opponent Pacman " + str(candidateOpponentPacman) + "Distance: " + str(distance))
+                if candidateOpponentPacman not in wallList:
+                    wallList.append(candidateOpponentPacman)
+                    wall_grids[candidateOpponentPacman[0]][candidateOpponentPacman[1]] = True
+                considerPacmanSurroundingAreaDistanceThreshold = 2
+                if distance <= considerPacmanSurroundingAreaDistanceThreshold:
+                    x, y = candidateOpponentPacman[0], candidateOpponentPacman[1]
+                    if (x + 1, y) not in wallList:
+                        wallList.append((x + 1, y))
+                        wall_grids[x + 1][y] = True
+                    if (x - 1, y) not in wallList:
+                        wallList.append((x - 1, y))
+                        wall_grids[x - 1][y] = True
+                    if (x, y + 1) not in wallList:
+                        wallList.append((x, y + 1))
+                        wall_grids[x][y + 1] = True
+                    if (x, y - 1) not in wallList:
+                        wallList.append((x, y - 1))
+                        wall_grids[x][y - 1] = True
 
-  def getFeatures(self, gameState, action):
-    # features could be a list of heuristic values e.g [foodHuer, capsuleHeur, avoidGhost, huntGhost,...]
-    pass
+        combined_wall_grid = game.Grid(grid_width, grid_height, False)
+        for i in range(grid_width):
+            for j in range(grid_height):
+                combined_wall_grid.data[i][j] = wall_grids[i][j]
+        updatedGameState.data.layout.walls = combined_wall_grid
+        
+        
+        if self.mode == "invader home mode":
+            for element in capsuleList:
+                if element not in foodList: # and self.isRoadBlockingCapsule(element, gameState):
+                    foodList.append(element)
+            huntingPacmanScoreThreshold = 3
+            score = self.getScore(updatedGameState)
+            if score >= huntingPacmanScoreThreshold and myScaredTime == 0:
+                print("Optimistic Score & Nearby Pacman Present, Hunt It! ")
+                print("Score: " + str(score))
+                print("Nearby Pacman List: " + str(opponentPacmanList))
+                for element in opponentPacmanList:
+                    if element not in foodList:
+                        foodList.append(element)
+            
+            closestFood, distance = self.closestObject(foodList, updatedGameState)
+            closestFoodProblem = PositionSearchProblem(updatedGameState, updatedGameState.getAgentPosition(self.index), goal=closestFood)
+            actions = wastarSearch(closestFoodProblem, manhattanHeuristic)
+            self.updateScore(updatedGameState)
+            print("Goal: " + str(closestFood))
+            if closestFood in foodList:
+                print("Goal Type: Food")
+            elif closestFood in capsuleList:
+                print("Goal Type: Capsule")
+            else:
+                print("Goal Type: Nearby Pacman in Home Territory")
+            if len(actions) == 0:
+                actions.append("Stop")
+            print("Action: " + actions[0])
+            print("===============================")
+            print()
+            print()
+            updatedGameState.data.layout.walls = original_wall_grids
+            gameState = updatedGameState
+            if actions[0] is None:
+                print("None Action 0")
+            return actions[0]
+        
+        
+        elif self.mode == "invader hunting mode" and len(opponentList) == 0:
+            # If I currently carries no food, than do my best
+            # Otherwise, find food within certain distance threshold.
+            if updatedGameState.getAgentState(self.index).numCarrying == 0:
+                foodDistanceThreshold = sys.maxsize
+            else:
+                foodDistanceThreshold = 8
+            goodList = []
+            closestFood = None
+            closestDistance = sys.maxsize
+            for element in foodList:
+                tempDistance = self.getMazeDistance(currentPosition, element)
+                if element not in goodList and tempDistance < foodDistanceThreshold:
+                    goodList.append(element)
+                    if tempDistance < closestDistance:
+                        closestDistance = tempDistance
+                        closestFood = element
+            for element in capsuleList:
+                tempDistance = self.getMazeDistance(currentPosition, element)
+                if element not in goodList and tempDistance < foodDistanceThreshold: # and self.isRoadBlockingCapsule(element, updatedGameState):
+                    goodList.append(element)
+                    if tempDistance < closestDistance:
+                        closestDistance = tempDistance
+                        closestFood = element
+            huntingPacmanScoreThreshold = 3
+            score = self.getScore(updatedGameState)
+            if score > huntingPacmanScoreThreshold:
+                for element in opponentPacmanList:
+                    tempDistance = self.getMazeDistance(currentPosition, element)
+                    if element not in goodList and tempDistance < foodDistanceThreshold:
+                        goodList.append(element)
+                        if tempDistance < closestDistance:
+                            closestDistance = tempDistance
+                            closestFood = element
+            if len(goodList) == 0:
+                print("Mode Changes: invader retreat mode")
+                width, height = self.getWidthandHeight(updatedGameState)
+                homeWidth = int(width / 2)
+                candidateHomeList = []
+                if self.red:
+                    for i in range(1, height):
+                        if (homeWidth - 1, i) not in wallList: # IDEA: can also be -2, go deeper into the home, let the guard ghost goes away.
+                            candidateHomeList.append((homeWidth - 1, i))
+                else:
+                    for i in range(1, height):
+                        if (homeWidth + 2, i) not in wallList: # IDEA: can also be +3, go deeper into the home, let the guard ghost goes away
+                            candidateHomeList.append((homeWidth + 2, i))
+                closestHome, distance = self.closestObject(candidateHomeList, updatedGameState)
+                goHomeProblem = PositionSearchProblem(updatedGameState, updatedGameState.getAgentPosition(self.index), goal=closestHome)
+                actions = wastarSearch(goHomeProblem, manhattanHeuristic)
+                self.updateScore(updatedGameState)
+                print("Goal: " + str(closestHome))
+                print("Goal Type: Closest Home")
+                if len(actions) == 0:
+                    # actions.append("Stop")
+                    print("Empty Action List, Random Select Legal Actions")
+                    actions = []
+                    x, y = currentPosition[0], currentPosition[1]
+                    if (x - 1, y) not in wallList:
+                        actions.append("West")
+                    if (x + 1, y) not in wallList:
+                        actions.append("East")
+                    if (x, y - 1) not in wallList:
+                        actions.append("South")
+                    if (x, y + 1) not in wallList:
+                        actions.append("North")
+                    if len(actions) != 0:
+                        actions[0] = random.choice(actions)
+                    else:
+                        actions.append("Stop")
+                print("Action: " + actions[0])
+                print("===============================")
+                print()
+                print()
+                updatedGameState.data.layout.walls = original_wall_grids
+                gameState = updatedGameState
+                if actions[0] is None:
+                    print("None Action 1")
+                return actions[0]
+            closestFoodProblem = PositionSearchProblem(updatedGameState, updatedGameState.getAgentPosition(self.index), goal=closestFood)
+            actions = wastarSearch(closestFoodProblem, manhattanHeuristic)
+            self.updateScore(updatedGameState)
+            print("Goal: " + str(closestFood))
+            if closestFood in foodList:
+                print("Goal Type: Food")
+            elif closestFood in capsuleList:
+                print("Goal Type: Capsule")
+            else:
+                print("Goal Type: Opponent Pacman At Home")
+                print("Opponent Pacman List: " + str(opponentPacmanList))
+                print("Score: " + str(score))
+            if len(actions) == 0:
+                actions.append("Stop")
+                print("Abnormal Stop Action! ")
+            print("Action: " + actions[0])
+            print("===============================")
+            print()
+            print()
+            updatedGameState.data.layout.walls = original_wall_grids
+            gameState = updatedGameState
+            if actions[0] is None:
+                print("None Action 2")
+            return actions[0]
+        
+        
+        elif self.mode == "invader hunting mode" and len(opponentList) != 0:
+            print("Opponent List: " + str(opponentList))
+            safeList = []
+            for foodCoordinate in foodList:
+                if self.isSafeCoordinate(foodCoordinate, updatedGameState):
+                    safeList.append(foodCoordinate)
+            for capsuleCoordinate in capsuleList:
+                safeList.append(capsuleCoordinate)
+            print("Number of Safe Goods: " + str(len(safeList)))
+            if len(safeList) == 0:
+                print("Mode Change: invader retreat mode")
+                width, height = self.getWidthandHeight(updatedGameState)
+                homeWidth = int(width / 2)
+                candidateHomeList = []
+                if self.red:
+                    for i in range(1, height):
+                        if (homeWidth - 1, i) not in wallList:
+                            candidateHomeList.append((homeWidth - 1, i))
+                else:
+                    for i in range(1, height):
+                        if (homeWidth + 2, i) not in wallList:
+                            candidateHomeList.append((homeWidth + 2, i))
+                closestHome, distance = self.closestObject(candidateHomeList, updatedGameState)
+                goHomeProblem = PositionSearchProblem(updatedGameState, updatedGameState.getAgentPosition(self.index), goal=closestHome)
+                actions = wastarSearch(goHomeProblem, manhattanHeuristic)
+                self.updateScore(updatedGameState)
+                print("Goal: " + str(closestHome))
+                print("Goal Type: Closest Home")
+                if len(actions) == 0:
+                    # actions.append("Stop")
+                    # Don't Stop, stop is the most stupidest move
+                    print("Empty Action List, Random Select Legal Actions")
+                    actions = []
+                    x, y = currentPosition[0], currentPosition[1]
+                    if (x + 1, y) not in wallList:
+                        actions.append("East")
+                    if (x - 1, y) not in wallList:
+                        actions.append("West")
+                    if (x, y + 1) not in wallList:
+                        actions.append("North")
+                    if (x, y - 1) not in wallList:
+                        actions.append("South")
+                    if len(actions) != 0:
+                        actions[0] = random.choice(actions)
+                    else:
+                        actions.append("Stop")
+                print("Action: " + actions[0])
+                print("===============================")
+                print()
+                print()
+                updatedGameState.data.layout.walls = original_wall_grids
+                gameState = updatedGameState
+                if actions[0] is None:
+                    print("None Action 3")
+                return actions[0]
+            closestSafe, distance = self.closestObject(safeList, updatedGameState)
+            if closestSafe is not None:
+                closestFoodProblem = PositionSearchProblem(updatedGameState, updatedGameState.getAgentPosition(self.index), goal=closestSafe)
+                actions = wastarSearch(closestFoodProblem, manhattanHeuristic)
+            else:
+                print("Mode Change: invader retreat mode")
+                width, height = self.getWidthandHeight(updatedGameState)
+                homeWidth = int(width / 2)
+                candidateHomeList = []
+                if self.red:
+                    for i in range(1, height):
+                        if (homeWidth - 1, i) not in wallList:
+                            candidateHomeList.append((homeWidth - 1, i))
+                else:
+                    for i in range(1, height):
+                        if (homeWidth + 2, i) not in wallList:
+                            candidateHomeList.append((homeWidth + 2, i))
+                closestHome, distance = self.closestObject(candidateHomeList, updatedGameState)
+                goHomeProblem = PositionSearchProblem(updatedGameState, updatedGameState.getAgentPosition(self.index), goal=closestHome)
+                actions = wastarSearch(goHomeProblem, manhattanHeuristic)
+            self.updateScore(updatedGameState)
+            print("Goal: " + str(closestSafe))
+            if closestSafe in foodList:
+                print("Goal Type: Safe Food")
+            elif closestSafe in capsuleList:
+                print("Goal Type: Safe Capsule")
+            else:
+                print("Goal Type: Closest Home")
+            if len(actions) == 0:
+                # actions.append("Stop")
+                print("Empty Action List, Random Select Legal Actions")
+                actions = []
+                x, y = currentPosition[0], currentPosition[1]
+                if (x - 1, y) not in wallList:
+                    actions.append("West")
+                if (x + 1, y) not in wallList:
+                    actions.append("East")
+                if (x, y - 1) not in wallList:
+                    actions.append("South")
+                if (x, y + 1) not in wallList:
+                    actions.append("North")
+                if len(actions) != 0:
+                    actions[0] = random.choice(actions)
+                else:
+                    actions.append("Stop")
+            print("Action: " + actions[0])
+            print("===============================")
+            print()
+            print()
+            updatedGameState.data.layout.walls = original_wall_grids
+            gameState = updatedGameState
+            if actions[0] is None:
+                print("None Action 4")
+            return actions[0]
+        
+        
+        elif self.mode == "invader power mode":
+            goodList = []
+            for element in foodList:
+                if element not in goodList:
+                    goodList.append(element)
+            for element in capsuleList:
+                if element not in goodList and element not in wallList:
+                    goodList.append(element)
+            scaredTimerCountingDownThreshold = 5
+            scaredOpponentGhostDistance = 1
+            for element in opponentList:
+                for key in opponentDict:
+                    if element == key[1] and element not in wallList and opponentDict[key] >= scaredTimerCountingDownThreshold and element not in goodList:
+                        if self.getMazeDistance(currentPosition, element) <= scaredOpponentGhostDistance:
+                            goodList.append(element)
+            # huntingPacmanScoreThreshold = 5
+            # score = self.getScore(updatedGameState)
+            # if score > huntingPacmanScoreThreshold:
+            #     for element in opponentPacmanList:
+            #         if element not in foodList:
+            #             foodList.append(element)
+            if len(goodList) == 0:
+                print("Trigger invader retreat mode")
+                width, height = self.getWidthandHeight(updatedGameState)
+                homeWidth = int(width / 2)
+                candidateHomeList = []
+                if self.red:
+                    for i in range(1, height):
+                        if (homeWidth - 1, i) not in wallList:
+                            candidateHomeList.append((homeWidth - 1, i))
+                else:
+                    for i in range(1, height):
+                        if (homeWidth + 2, i) not in wallList:
+                            candidateHomeList.append((homeWidth + 2, i))
+                closestHome, distance = self.closestObject(candidateHomeList, updatedGameState)
+                goHomeProblem = PositionSearchProblem(updatedGameState, updatedGameState.getAgentPosition(self.index), goal=closestHome)
+                actions = wastarSearch(goHomeProblem, manhattanHeuristic)
+                self.updateScore(updatedGameState)
+                print("Goal: " + str(closestHome))
+                print("Goal Type: Closest Home")
+                if len(actions) == 0:
+                    # actions.append("Stop")
+                    print("Empty Action List, Random Select Legal Actions")
+                    actions = []
+                    x, y = currentPosition[0], currentPosition[1]
+                    if (x - 1, y) not in wallList:
+                        actions.append("West")
+                    if (x + 1, y) not in wallList:
+                        actions.append("East")
+                    if (x, y - 1) not in wallList:
+                        actions.append("South")
+                    if (x, y + 1) not in wallList:
+                        actions.append("North")
+                    if len(actions) != 0:
+                        actions[0] = random.choice(actions)
+                    else:
+                        actions.append("Stop")
+                print("Action: " + actions[0])
+                print("===============================")
+                print()
+                print()
+                updatedGameState.data.layout.walls = original_wall_grids
+                gameState = updatedGameState
+                if actions[0] is None:
+                    print("None Action 5")
+                return actions[0]
+            
+            closestFood, distance = self.closestObject(goodList, updatedGameState)
+            closestFoodProblem = PositionSearchProblem(updatedGameState, updatedGameState.getAgentPosition(self.index), goal=closestFood)
+            actions = wastarSearch(closestFoodProblem, manhattanHeuristic)
+            self.updateScore(updatedGameState)
+            print("Goal: " + str(closestFood))
+            if closestFood in capsuleList:
+                print("Goal Type: Capsule")
+            elif closestFood in opponentList:
+                print("Goal Type: Opponent Ghost")
+            else:
+                print("Goal Type: Food")
+            if len(actions) == 0:
+                # actions.append("Stop")
+                print("Empty Action List, Random Select Legal Actions")
+                actions = []
+                x, y = currentPosition[0], currentPosition[1]
+                if (x - 1, y) not in wallList:
+                    actions.append("West")
+                if (x + 1, y) not in wallList:
+                    actions.append("East")
+                if (x, y - 1) not in wallList:
+                    actions.append("South")
+                if (x, y + 1) not in wallList:
+                    actions.append("North")
+                if len(actions) != 0:
+                    actions[0] = random.choice(actions)
+                else:
+                    actions.append("Stop")
+            print("Action: " + actions[0])
+            print("Capsule Eaten: " + str(updatedGameState.data._capsuleEaten))
+            print("Scared Timer: " + str(scaredTime))
+            print("===============================")
+            print()
+            print()
+            updatedGameState.data.layout.walls = original_wall_grids
+            gameState = updatedGameState
+            if actions[0] is None:
+                print("None Action 6")
+            return actions[0]
+        
+        
+        elif self.mode == "invader retreat mode":
+            width, height = self.getWidthandHeight(updatedGameState)
+            homeWidth = int(width / 2)
+            candidateHomeList = []
+            if self.red:
+                for i in range(1, height):
+                    if (homeWidth - 1, i) not in wallList:
+                        candidateHomeList.append((homeWidth - 1, i))
+            else:
+                for i in range(1, height):
+                    if (homeWidth + 2, i) not in wallList:
+                        candidateHomeList.append((homeWidth + 2, i))
+            closestHome, distance = self.closestObject(candidateHomeList, updatedGameState)
+            goHomeProblem = PositionSearchProblem(updatedGameState, updatedGameState.getAgentPosition(self.index), goal=closestHome)
+            actions = wastarSearch(goHomeProblem, manhattanHeuristic)
+            self.updateScore(updatedGameState)
+            print("Goal: " + str(closestHome))
+            print("Goal Type: Closest Home")
+            if len(actions) == 0:
+                # actions.append("Stop")
+                print("Empty Action List, Random Select Legal Actions")
+                actions = []
+                x, y = currentPosition[0], currentPosition[1]
+                if (x - 1, y) not in wallList:
+                    actions.append("West")
+                if (x + 1, y) not in wallList:
+                    actions.append("East")
+                if (x, y - 1) not in wallList:
+                    actions.append("South")
+                if (x, y + 1) not in wallList:
+                    actions.append("North")
+                if len(actions) != 0:
+                    actions[0] = random.choice(actions)
+                else:
+                    actions.append("Stop")
+            print("Action: " + actions[0])
+            print("===============================")
+            print()
+            print()
+            updatedGameState.data.layout.walls = original_wall_grids
+            gameState = updatedGameState
+            if actions[0] is None:
+                print("None Action 7")
+            return actions[0]
+           
+    def updateScore(self, gameState):
+        gameState.data.score = len(gameState.getRedFood().asList()) - len(gameState.getBlueFood().asList())
+    
+    """
+    self.updateMode(gameState)
+        print(gameState.data._capsuleEaten)
+        for opponentIndex in self.getOpponents(gameState):
+            if not gameState.getAgentState(opponentIndex).isPacman:
+                print(gameState.data.agentStates[opponentIndex].scaredTimer)
+    """
+    
+    def updateMode(self, gameState, scaredTime, closestOpponentDistance):
+        boardWidth, boardHeight = self.getWidthandHeight(gameState)
+        currentPosition = gameState.getAgentPosition(self.index)
 
-  def getWeights(self, gameState, action):
-    # Weights reflects priorities of features. The weight list varies as the game advances
-    # e.g, Initially, the invader agent cares anything less than how to cross the boarder
-    pass
+        if len(self.getFood(gameState).asList()) <= 2:
+            self.mode = "invader retreat mode"
+            return
+        if self.red and currentPosition[0] < int(boardWidth / 2):
+            self.mode = "invader home mode"
+            return
+        elif not self.red and currentPosition[0] >= int(boardWidth / 2):
+            self.mode = "invader home mode"
+            return
+        else:
+            if gameState.data._capsuleEaten is not None:
+                self.mode = "invader power mode"
+                return
+            scaredTimerCountingDownThreshold = 4 # IDEA: maybe 5, which will make the invader more conservative.
+            if gameState.data._capsuleEaten is None and scaredTime >= scaredTimerCountingDownThreshold:
+                self.mode = "invader power mode"
+                return
+            if gameState.data._capsuleEaten is None and scaredTime < scaredTimerCountingDownThreshold:
+                self.mode = "invader hunting mode"
+            #escapeDistanceThreshold = 3
+            #escapeScoreThreshold = 0
+            #if closestOpponentDistance <= escapeDistanceThreshold:
+            #    currentScore = self.getScore(gameState)
+            #    if (currentScore > escapeScoreThreshold and self.red) or (currentScore < -1 * escapeScoreThreshold and not self.red):
+            #        self.mode = "invader retreat mode"
+            #    else:
+            #        self.mode = "invader hunting mode"
+            self.mode = "invader hunting mode"
+            
+    
+    def evaluate(self, gameState, action):
+        pass
+    
+    def getFeatures(self, gameState, action):
+        pass
+    
+    def getWeights(self, gameState, action):
+        pass
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
 
+
+
+
+#################################
+#   WASTAR DEFENDER
+#################################
 
 class WaStarDefender(DummyAgent):
-  """
-    Defender Behavior design:
-    1. Patrol around home area -- search and chase pacman (priority: High)
-    2.
+    """
+      Defender Behavior design:
+      1. Patrol around home area -- search and chase pacman (priority: High)
+      2.
+  
+    """
+    mode = "goDefendingFood"
+    initialPosition = None
+    oppInitialPosition = None
+    myZone = None  # Safe space
+    opponentPosition = None
+    sacrifice = False
 
-  """
-  def chooseAction(self, gameState):
-    pass
+    def chooseAction(self, gameState):
+        # The first time to choose an action
+        currentPosition = gameState.getAgentPosition(self.index)
+        if not self.initialPosition:
+            self.initialPosition = currentPosition
+            width, height = self.getWidthandHeight(gameState)
+            if self.initialPosition == (1, 1):
+                self.oppInitialPosition = (width - 2, height - 2)
+                self.myZone = range(int(width / 2))
+            else:
+                self.oppInitialPosition = (1, 1)
+                self.myZone = range(int(width / 2), int(width))
+        opponents = self.getOpponents(gameState)  # the indexes of opponents
+    
+        # To determine the mode
+        if not self.sacrifice:
+            for opponent in opponents:
+                # if in observable area
+                if gameState.getAgentPosition(opponent):
+                    # if the agent is not scared
+                    if gameState.getAgentState(self.index).scaredTimer <= 0:
+                        # if the opponent invades
+                        if gameState.getAgentPosition(opponent)[0] in self.myZone:
+                            self.mode = "huntOpponent"
+                            self.opponentPosition = gameState.getAgentPosition(opponent)
+                            break
+                        else:
+                            self.mode = "goDefendingFood"
+                    else:
+                        self.opponentPosition = gameState.getAgentPosition(opponent)
+                        d = self.getMazeDistance(self.initialPosition, currentPosition)
+                        if d < gameState.getAgentState(self.index).scaredTimer - 2:
+                            self.sacrifice = True
+                            self.mode = "sacrifice"
+                        else:
+                            self.mode = "flee"
+                        break
+                # if no opponents in observable area
+                else:
+                    self.mode = "goDefendingFood"
+    
+        if self.mode == "sacrifice":
+            goHomeProblem = PositionSearchProblem(gameState, currentPosition, goal=self.opponentPosition)
+            actions = wastarSearch(goHomeProblem, manhattanHeuristic)
+            if len(actions) > 0:
+                return actions[0]
+            else:
+                self.sacrifice = False
+                self.mode == "goDefendingFood"
+    
+        # When the agent does not find any invader
+        if self.mode == "goDefendingFood":
+            currentPosition = currentPosition
+            foodDefending, distance = self.closestObjectUsingPosition(self.getFoodYouAreDefending(gameState).asList(),
+                                                                      self.oppInitialPosition)
+            defendFoodProblem = PositionSearchProblem(gameState, currentPosition, goal=foodDefending)
+            actions = wastarSearch(defendFoodProblem, manhattanHeuristic)
+            if len(actions) > 0:
+                return actions[0]
+            else:
+                return 'Stop'
+        '''
+        Actually it is defending food from opponent rather than hunting opponent
+        hunting mode
+        logic 1: Set the pacman's closet food as the goal
+        logic 2: Set the pacman's position as the goal
+        '''
+        if self.mode == "huntOpponent":
+            ''' 1
+            foodDefending, distance = self.closestObjectUsingPosition(self.getFoodYouAreDefending(gameState).asList(),
+                                                                      self.opponentPosition)
+            defendFoodProblem = PositionSearchProblem(gameState, gameState.getAgentPosition(self.index), goal=foodDefending)
+            actions = wastarSearch(defendFoodProblem, manhattanHeuristic)
+            if len(actions) > 0:
+                return actions[0]
+            else:
+                return 'Stop'
+            '''
+            defendFoodProblem = PositionSearchProblem(gameState, currentPosition,
+                                                      goal=self.opponentPosition)
+            actions = wastarSearch(defendFoodProblem, manhattanHeuristic)
+            if len(actions) > 0:
+                return actions[0]
+            else:
+                return 'Stop'
+    
+        if self.mode == "flee":
+            foodDefending, distance = self.closestObjectUsingPosition(self.getFoodYouAreDefending(gameState).asList(),
+                                                                      self.opponentPosition)
+            fleeProblem = FleeProblem(gameState, currentPosition, self.opponentPosition,
+                                      goal=foodDefending)
+            actions = wastarSearch(fleeProblem, manhattanHeuristic)
+            if len(actions) > 0:
+                return actions[0]
+            else:
+                return 'Stop'
 
-  def getFeatures(self, gameState, action):
-    pass
+    def farthestObjectUsingPosition(self, listOfObjects, currentPosition):
+        farthestObj = None
+        farthestDistance = 0
+        for candidateObject in listOfObjects:
+            if self.getMazeDistance(candidateObject, currentPosition) > farthestDistance:
+                farthestDistance = self.getMazeDistance(candidateObject, currentPosition)
+                farthestObj = candidateObject
+        return farthestObj, farthestDistance
 
-  def getWeights(self, gameState, action):
-    pass
+    def getWidthandHeight(self, gameState):
+        width = gameState.data.layout.width
+        height = gameState.data.layout.height
+        return width, height
+
+    def getFeatures(self, gameState, action):
+        pass
+
+    def getWeights(self, gameState, action):
+        pass
 
 
 ###################################
 #        Helper Funcs
 ###################################
 def wastarSearch(problem, heuristic):
-  priorityFunc = lambda x: x[2] + heuristic(x[0], problem)
+    priorityFunc = lambda x: x[2] + heuristic(x[0], problem)
+    
+    # initialize a priority queue
+    open = util.PriorityQueue()
+    closed = []
+    
+    # Retrieve the init state
+    init = (problem.getStartState(), ['Stop'], 0)
+    open.push(init, priorityFunc(init))
+    while not open.isEmpty():
+        currNode = open.pop()
+        currState = currNode[0]
+        currPath = currNode[1]
+        currPathCost = currNode[2]
+        
+        if problem.isGoalState(currState):
+            return currPath[1:]
+        else:
+            closed.append(currState)
+        successors = problem.getSuccessors(currState)
+        
+        if len(successors) > 0:
+            for each in successors:
+                #if each not in wallList:
+                newState = each[0]
+                newPathCost = currPathCost + each[2]
+                if newState not in closed:
+                    temp = (each[0], currPath + [each[1]], newPathCost)
+                    open.update(temp, priorityFunc(temp))
+    
+    return []
 
-  # initialize a priority queue
-  open = util.PriorityQueue()
-  closed = []
+def manhattanHeuristic(position, problem, info={}):
+    "The Manhattan distance heuristic for a PositionSearchProblem"
+    xy1 = position
+    xy2 = problem.goal
+    return abs(xy1[0] - xy2[0]) + abs(xy1[1] - xy2[1])
 
-  # Retrieve the init state
-  init = (problem.getStartState(), ['Stop'], 0)
-  open.push(init, priorityFunc(init))
-  while not open.isEmpty():
-    currNode = open.pop()
-    currState = currNode[0]
-    currPath = currNode[1]
-    currPathCost = currNode[2]
-
-    if problem.isGoalState(currState):
-      return currPath[1:]
-    else:
-      closed.append(currState)
-    successors = problem.getSuccessors(currState)
-
-    if len(successors) > 0:
-      for each in successors:
-        newState = each[0]
-        newPathCost = currPathCost + each[2]
-        if newState not in closed:
-          temp = (each[0], currPath + [each[1]], newPathCost)
-          open.update(temp, priorityFunc(temp))
-
-  return []
-
-#
-# def heuristic_switcher(state, gameState):
-#   pass
+def heuristic_switcher(state, gameState):
+    pass
 
 def nullHeuristic():
-  return 0
+    return 0
 
 def foodHeuristic():
-  pass
+    pass
 
 def capsuleHeuristic():
-  pass
+    pass
 
 def manhattanDistance(point1, point2):
-  return abs(point1[0]-point2[0]) + abs(point1[1]-point2[1])
+    return abs(point1[0]-point2[0]) + abs(point1[1]-point2[1])
 
 def findNearestFood(state, gameState):
-  pass
+    pass
 
 def findFurthestFood(state, gameState):
-  pass
+    pass
 
 def findNearestGhost(state, gameState):
-  pass
+    pass
 
 
 ###################################
 #      Problem Gallery
 ###################################
-class PositionSearchProblem:
-    # state model: ((x,y), )
-  pass
 
-
-
-
-
-########################################
-#          Deep Q-Learning
-########################################
-import tensorflow as tf
-from keras.models import Sequential
-from keras.layers import Input, Add, Dense, \
-    Activation, Flatten, Conv2D, AveragePooling2D, MaxPooling2D
-from keras.optimizers import Adam
-from keras.initializers import glorot_uniform, Constant
-import numpy as np
-
-class ConvDQN():
-    def __init__(self):
-        self.numTrained = 0
-        self.state_size = (32, 16, 7)
-        self.num_actions = 5 # [stop, north, south, west, east]
-        self.gamma = 0.95    # discount rate
-        self.epsilon = 1.0  # exploration rate
-        self.epsilon_min = 0.01
-        self.epsilon_decay = 0.995
-        self.learning_rate = 0.001
-        self.model = self.model_config()
-        self.load()
-        self.model_name = ''
-
-    def model_config(self):
-        '''
-        define the model structure
-        :return:  model object
-        '''
-        model = Sequential()
-        # conv1  filters=32, kernel_size=5, stride=1, padding=valid   (?,32,16,7) -> (?, 28,12,32)
-        model.add(Conv2D(32, (5, 5), strides=(1, 1), padding='valid',
-                              activation='relu', bias_initializer=Constant(0.1),
-                              kernel_initializer=glorot_uniform()))
-
-        # MaxPool1    pool_size = 3, stride=1, padding=same   (28,12,32) -> (26,20,32)
-        model.add(MaxPooling2D((3, 3), strides=(1, 1), padding='valid'))
-
-        # conv2  filters=64, kernel_size=3, stride=1, padding=valid   (26,20,32) -> (24,4,64)
-        model.add(Conv2D(64, (3, 3), strides=(1, 1), padding='valid',
-                              activation='relu', bias_initializer=Constant(0.1),
-                              kernel_initializer=glorot_uniform()))
-
-        # MaxPool2    pool_size = 2, stride=2, padding=same   (24,4,64) -> (24,4,64)
-        model.add(MaxPooling2D((2, 2), strides=(2, 2), padding='same'))
-
-        # conv3  filters=128, kernel_size=2, stride=2, padding=valid   (24,4,64) -> (12,2,128)
-        model.add(Conv2D(128, (2, 2), strides=(2, 2), padding='valid',
-                              activation='relu', bias_initializer=Constant(0.1),
-                              kernel_initializer=glorot_uniform()))
-
-        # AvgPool3    pool_size = 2, stride=1, padding=valid   (12,2,128) -> (11,1,128)
-        model.add(AveragePooling2D((2, 2), strides=(1, 1), padding='valid'))
-        model.add(Flatten())  # (12,2,128) -> (1,3072)
-
-        # FC1 ( in: 1408   out: 256)
-        model.add(Dense(256, activation='relu'))
-
-        # FC2 ( in: 256 out: 256)
-        model.add(Dense(256, activation='relu'))
-
-        # Output layer ( in: 256  out: 5)
-        model.add(Dense(self.num_actions, activation='linear'))
-
-        # Adam Optimizer
-        model.compile(loss='mse', optimizer=Adam(lr=self.learning_rate) )
-        return model
-
-    def forward(self, state):
-        """
-        :param state:  state matrices
-        :return: Q_value prediction
-        """
-        return self.model.predict(state)
-
-    def batch_learn(self, input, target):
-        self.model.train_on_batch(input, target)
-
-    # TODO
-    def count_neurons(self, input_size):
-        return 0
-
-    def load(self, model_file=None):
-
-        try:
-            model_indices = [0]
-            print("\nTrying to load model...", end=' ')
-            if model_file is not None:
-                self.model.load_weights(model_file)
-            else:
-                for file in os.listdir(os.getcwd()):
-                    if file.endswith(".model"):
-                        model_indices.append(int(re.findall(r'_(\d+)', file)[0]))
-                self.numTrained = max(model_indices)
-                self.model_name = "myModel_episode_{}.model".format(self.numTrained)
-                model_file = os.path.join(os.getcwd(), self.model_name)
-                self.model.load_weights(model_file)
-
-            if self.numTrained != 0:
-                print("Model has been loaded !\n")
-            else:
-                print("No pre-trained model...\nBuild new model...\n")
-        except:
-            print("No pre-trained model...\nBuild new model...\n")
-
-    def save(self, replace=True):
-        self.numTrained += 1
-        model_path = os.path.join(os.getcwd(), "myModel_episode_{}.model".format(self.numTrained))
-        if not replace:
-            self.model.save_weights(model_path)
-            print("\nModel saved as myModel_episode_{}.model\n".format(self.numTrained))
-        else:
-            try:
-                os.remove(os.path.join(os.getcwd(), self.model_name))
-                self.model.save_weights(model_path)
-            except:
-                print("\nFail to delete previous model")
-                self.model.save_weights(model_path)
-            print("Model saved as myModel_episode_{}.model\n".format(self.numTrained))
-
-
-
-class SoftmaxBody:
-    def __init__(self, T):
-        self.T = T  # temperature, the higher t introduces more uncertainty
-
-    def softmax(self, x):
-        """Compute softmax values for each sets of scores in x."""
-        e_x = np.exp(x - np.max(x))
-        return e_x / e_x.sum(axis=0)  # only difference
-
-    def softmax_with_temperature(self, x):
-        '''
-        :param x: Q_value array
-        :return: the index of chosen action
-        '''
-        x = np.array(x) / self.T
-        print("\nscale T: ", x)
-        x = self.softmax(x)
-        print("Probs: ", x)
-        action = np.argmax(np.random.multinomial(1, x, 1))
-        print("Prediction: {}, choose action {}\n".format(x, action))
-        return action  # action index
-
-from collections import deque, namedtuple
-class ReplayMemory(object):
-    def __init__(self, capacity=10000):
-        self.capacity = capacity
-        self.buffer = deque()
-
-    def __len__(self):
-        return len(self.buffer)
-
-    def sample_batch(self, batch_size):  # creates an iterator that returns random batches
-        ofs = 0
-        vals = list(self.buffer)
-        np.random.shuffle(vals)
-        while (ofs+1)*batch_size <= len(self.buffer):
-            yield vals[ofs*batch_size: (ofs+1)*batch_size]
-            ofs += 1
-
-    def push(self, history):
-        self.buffer.append(history)
-        while len(self.buffer) > self.capacity: # we accumulate no more than the capacity (10000)
-            self.buffer.popleft()
-
-
-# define one step tuple
-Step = namedtuple('Step', ['state', 'action', 'reward'])
-class NStepProgress:
+# Search Problem Abstract Class
+class SearchProblem:
     """
-    the agent learns from a n_step history, not for a single step
+    This class outlines the structure of a search problem, but doesn't implement
+    any of the methods (in object-oriented terminology: an abstract class).
+  
+    You do not need to change anything in this class, ever.
     """
-    def __init__(self, ai, n_step=5):
-        self.ai = ai
-        self.rewards = []
-        self.n_step = n_step
-        self.history = deque()
-
-    def yieldsHistory(self, oneStep):
-        self.rewards.append(oneStep.reward)
-        self.history.append(oneStep)
-        while len(self.history) > self.n_step:
-            self.history.popleft()
-        if len(self.history) == self.n_step:
-            return tuple(self.history)
-        return None
-
-
-class AI:
-    def __init__(self, brain, body):
-        self.brain = brain  # ConvDQN
-        self.body = body  # SoftmaxBody
-
-    def __call__(self, input_state):
-        input_state = np.array(input_state, dtype=np.float32)
-        input_volume = self.check_dim(input_state)
-        input_volume = input_volume.reshape((1,) + input_volume.shape)
-
-        output = self.brain.forward(input_volume)[0]
-        # print("output: {},  length: {}, dtype: {}".format(output, len(output), type(output[0])))
-
-        actions = self.body.softmax_with_temperature(output)
-        return actions
-
-    # TODO
-    def check_dim(self, input_state):
-        if input_state.shape != (32, 16, 7):
-            # resize the input
-            pass
-        return input_state
-
-    # TODO
-    def resize_input(self, input_state):
-        pass
-
-
-########################
-#     ConvDQN Agents
-########################
-class BasicAgentConvDQN(CaptureAgent):
-    def __init__(self, index, timeForComputing = .1):
-        super().__init__(index, timeForComputing)
-        self.controller = None
-        self.n_steps = None
-        self.memory = None
-
-        self.prev_state = None
-        self.current_state = None
-
-        self.prev_reward = 0
-        self.step_reward = 0
-
-        self.prev_action = None
-
-        self.invader = None
-
-        self.maze_dim = None
-        self.walls = None
-        self.wall_matrix = None
-
-        # training
-        self.epochs = None
-        self.cumulated_rewards = 0.0
-        self.num_of_step = 0
-
-    def registerInitialState(self, gameState):
-        self.current_state = gameState
-        self.walls = gameState.getWalls()
-        # dimensions of the grid world w * h
-        self.maze_dim = (gameState.data.layout.width, gameState.data.layout.height)
-
-        self.wall_matrix = self.getWallMatrix()
-
-        conv_dqn = ConvDQN()
-        softmax_body = SoftmaxBody(T=7.0)
-        self.controller = AI(brain=conv_dqn, body=softmax_body)
-
-        self.n_steps = NStepProgress(ai=self.controller, n_step=5)
-        self.memory = ReplayMemory(capacity=10000)
-
-        self.start = gameState.getAgentPosition(self.index)
-        CaptureAgent.registerInitialState(self, gameState)
-
-    def chooseAction(self, gameState):
-        self.current_state = gameState.deepCopy()
-        # Controller picks an action
-        state_volume = self.getStateVolume(self.current_state)
-        candidate_action_index = self.controller(state_volume)
-
-        if self.prev_state is not None:
-            self.addOneStep(self.current_state)
-        else:
-            self.prev_state = self.current_state.deepCopy()
-
-        self.prev_action = candidate_action_index
-        candidate_action = self.getDirection(candidate_action_index)
-        legal_act = gameState.getLegalActions(self.index)
-        if candidate_action not in legal_act:
-            return Directions.STOP
-
-        # print(candidate_action)
-        return candidate_action
-
-    def calculateRewardForPrevAction(self, gameState):
-
+    def getStartState(self):
+        """
+        Returns the start state for the search problem.
+        """
+        util.raiseNotDefined()
+    
+    def isGoalState(self, state):
+        """
+          state: Search state
+    
+        Returns True if and only if the state is a valid goal state.
+        """
+        util.raiseNotDefined()
+    
+    def getSuccessors(self, state):
+        """
+          state: Search state
+    
+        For a given state, this should return a list of triples, (successor,
+        action, stepCost), where 'successor' is a successor to the current
+        state, 'action' is the action required to get there, and 'stepCost' is
+        the incremental cost of expanding to that successor.
+        """
+        util.raiseNotDefined()
+    
+    def getCostOfActions(self, actions):
+        """
+         actions: A list of actions to take
+    
+        This method returns the total cost of a particular sequence of actions.
+        The sequence must be composed of legal moves.
+        """
         util.raiseNotDefined()
 
-    def addOneStep(self, gameState):
-        self.prev_reward = self.calculateRewardForPrevAction(gameState)
-        prev_step = Step(state=self.getStateVolume(self.prev_state),
-                         action=self.prev_action, reward=self.prev_reward)
-        prev_history = self.n_steps.yieldsHistory(oneStep=prev_step)
-        if prev_history is not None:
-            self.memory.push(prev_history)
-        self.prev_state = gameState.deepCopy()
+# PositionSearchProblem
+class PositionSearchProblem(SearchProblem):
+    """
+    A search problem defines the state space, start state, goal test, successor
+    function and cost function.  This search problem can be used to find paths
+    to a particular point on the pacman board.
 
-    def final(self, gameState):
-        '''
-          override function
-        :param gameState:
-        :return:
-        '''
-        # self.prev_reward = self.calculateReward()
-        score = self.getScore(gameState)
-        if score > 0:
-            self.prev_reward = 100
-        elif score < 0:
-            self.prev_reward = -100
-        else:
-            self.prev_reward = -50
+    The state space consists of (x,y) positions in a pacman game.
 
-        final_step = Step(state=self.getStateVolume(self.prev_state), action=self.prev_action, reward=self.prev_reward)
-        prev_history = self.n_steps.yieldsHistory(oneStep=final_step)
-        if prev_history is not None:
-            self.memory.push(prev_history)
-        self.train()
+    Note: this search problem is fully specified; you should NOT change it.
+    """
+    def __init__(self, gameState, startState, costFn = lambda x: 1, goal=(1,1), start=None, warn=True, visualize=True):
+        """
+        Stores the start and goal.
 
+        gameState: A GameState object (pacman.py)
+        costFn: A function from a search state (tuple) to a non-negative number
+        goal: A position in the gameState
+        """
+        self.walls = gameState.getWalls()
+        self.startState = startState
+        if start != None: self.startState = start
+        self.goal = goal
+        self.costFn = costFn
+        self.visualize = visualize
+        self.gameState = gameState
 
-    # state model: (w * h * num_of_channels), in this case, num_of_channels = 7
-    #   (wallMaxtrix, foodMatrix, capsuleMatrix, myPositionMatrix, pacmanMatrix, GhostMatrix, ScaredGhostMatrix)
+        # For display purposes
+        self._visited, self._visitedlist, self._expanded = {}, [], 0 # DO NOT CHANGE
 
-    def getWallMatrix(self):
-        '''
-         isWall: 1,  not wall: 0
-        '''
-        wallMatrix = np.zeros(self.maze_dim, dtype=np.int)
-        return self.matrixValueMapping1(self.walls, wallMatrix, map_dict={"True":1, "False":0})
+    def getStartState(self):
+        return self.startState
 
-    def getFoodMatrix(self, gameState):
-        '''
-        myFood: -1, targetFood: 1, all others: 0
-        '''
-        foodMatrix = np.zeros(self.maze_dim, dtype=np.int)
-        defendFoodMatrix = np.zeros(self.maze_dim, dtype=np.int)
-        Food = self.getFood(gameState)
-        defendFood = self.getFoodYouAreDefending(gameState)
-        foodMatrix = self.matrixValueMapping1(Food, foodMatrix, map_dict={"True": 1, "False": 0})
-        defendFoodMatrix = self.matrixValueMapping1(defendFood, defendFoodMatrix, map_dict={"True": -1, "False": 0})
-        # if gameState.isOnRedTeam(self.index):
-        #     redFoodMatrix = self.matrixValueMapping(redFood, redFoodMatrix, map_dict={"True": 1, "False": 0})
-        #     blueFoodMatrix = self.matrixValueMapping(blueFood, blueFoodMatrix, map_dict={"True": -1, "False": 0})
-        # else:
-        #     blueFoodMatrix = self.matrixValueMapping(blueFood, blueFoodMatrix, map_dict={"True": 1, "False": 0})
-        #     redFoodMatrix = self.matrixValueMapping(redFood, redFoodMatrix, map_dict={"True": -1, "False": 0})
-
-        return np.add(foodMatrix, defendFoodMatrix)
-
-    def getCapsuleMatrix(self, gameState):
-        '''
-        myCapsule: 1,  opponent capsule: -1 , all others: 0
-        '''
-        capsuleMatrix = np.zeros(self.maze_dim, dtype=np.int)
-
-        # defendCapsuleMatrix = np.zeros(self.maze_dim, dtype=np.int)
-        # capsules = self.getCapsules(gameState)
-        # defendCapsules = self.getCapsulesYouAreDefending(gameState)
-
-        capsule_list = gameState.getCapsules()
-        if len(capsule_list) > 0:
-            for (x, y) in capsule_list:
-                if gameState.isOnRedTeam(self.index):
-                    capsuleMatrix[x][-1-y] = 1 if x <= self.maze_dim[0] // 2 else -1
+    def isGoalState(self, state):
+        isGoal = state == self.goal
+        
+        if str(self.goal).startswith("HOME"):
+            param1, param2 = str(self.goal).split(" ")[1], str(self.goal).split(" ")[2]
+            if param2 == "<":
+                if state[0] < param1:
+                    return True
                 else:
-                    capsuleMatrix[x][-1-y] = -1 if x <= self.maze_dim[0] // 2 else 1
-        return capsuleMatrix
+                    return False
+            elif param2 == ">=":
+                if state[0] >= param1:
+                    return True
+                else:
+                    return False
 
-    def getGhostMatrix(self, gameState):
-        '''
-        Observable Ghosts -- > myTeam ghost: 1   opponent ghost: -1,  all others 0
-        '''
-        matrix = np.zeros(self.maze_dim, dtype=np.int)
-        find_position = lambda index: gameState.getAgentPosition(index) \
-            if not gameState.getAgentState(index).isPacman \
-                and not gameState.getAgentState(index).scaredTimer > 0 \
-                    else (-1, -1)
-        self.matrixValueMapping2(matrix, gameState, find_position)
-        return matrix
+        # For display purposes only
+        if isGoal and self.visualize:
+            self._visitedlist.append(state)
+            import __main__
+            if '_display' in dir(__main__):
+                if 'drawExpandedCells' in dir(__main__._display): #@UndefinedVariable
+                    __main__._display.drawExpandedCells(self._visitedlist) #@UndefinedVariable
 
-    def getPacmanMatrix(self, gameState):
-        '''
-        myTeam pacman: 1,  opponent pacman: -1,  all others : 0
-        '''
-        matrix = np.zeros(self.maze_dim, dtype=np.int)
-        find_position = lambda index: gameState.getAgentPosition(index) \
-            if gameState.getAgentState(index).isPacman else (-1, -1)
-        # print("from getPacmanMatrix: ")
-        self.matrixValueMapping2(matrix, gameState, find_position)
+        return isGoal
 
-        return matrix
+    def getSuccessors(self, state):
+        """
+        Returns successor states, the actions they require, and a cost of 1.
 
-    def getScaredGhost(self, gameState):
-        '''
-        scared myTeam Ghost: 1,   scared opponent Ghost: -1,  all others: 0
-        '''
-        matrix = np.zeros(self.maze_dim, dtype=np.int)
-        find_position = lambda index: gameState.getAgentPosition(index) \
-            if not gameState.getAgentState(index).isPacman \
-                and gameState.getAgentState(index).scaredTimer > 0 \
-                    else (-1, -1)
-        self.matrixValueMapping2(matrix, gameState, find_position)
+         As noted in search.py:
+             For a given state, this should return a list of triples,
+         (successor, action, stepCost), where 'successor' is a
+         successor to the current state, 'action' is the action
+         required to get there, and 'stepCost' is the incremental
+         cost of expanding to that successor
+        """
 
-        return matrix
+        successors = []
+        for action in [Directions.NORTH, Directions.SOUTH, Directions.EAST, Directions.WEST]:
+            x,y = state
+            dx, dy = game.Actions.directionToVector(action)
+            nextx, nexty = int(x + dx), int(y + dy)
+            if not self.walls[nextx][nexty]:
+                nextState = (nextx, nexty)
+                cost = self.costFn(nextState)
+                successors.append( ( nextState, action, cost) )
 
-    def getMyPositionMatrix(self, gameState):
-        '''
-        myPosition: 1,  all other: 0
-        '''
-        myPositionMatrix = np.zeros(self.maze_dim, dtype=np.int)
-        x,y = gameState.getAgentPosition(self.index)
-        myPositionMatrix[x][-1-y] = 1
-        return myPositionMatrix
+        # Bookkeeping for display purposes
+        self._expanded += 1 # DO NOT CHANGE
+        if state not in self._visited:
+            self._visited[state] = True
+            self._visitedlist.append(state)
 
-    def matrixViewer(self, matrix):
-        for i in range(self.maze_dim[1]):
-            print(matrix.T[i])
+        return successors
 
-    def matrixValueMapping1(self, valueGrid, matrix, map_dict):
-        w, h = self.maze_dim
-        for i in range(w):
-            for j in range(h):
-                matrix[i][-1 - j] = map_dict["True"] if valueGrid[i][j] else map_dict["False"]
-        return matrix
+    def getCostOfActions(self, actions):
+        """
+        Returns the cost of a particular sequence of actions. If those actions
+        include an illegal move, return 999999.
+        """
+        if actions == None: return 999999
+        x,y= self.getStartState()
+        cost = 0
+        for action in actions:
+            # Check figure out the next state and see whether its' legal
+            dx, dy = game.Actions.directionToVector(action)
+            x, y = int(x + dx), int(y + dy)
+            if self.walls[x][y]: return 999999
+            cost += self.costFn((x,y))
+        return cost
 
-    def matrixValueMapping2(self, matrix, gameState, func):
-        values = (1, -1)
-        if not gameState.isOnRedTeam(self.index):
-            values = values[::-1]
-        for pos in map(func, gameState.getRedTeamIndices()):
-            if pos and pos[0] + pos[1] > 0: matrix[pos[0]][-1-pos[1]] = values[0]
-        for pos in map(func, gameState.getBlueTeamIndices()):
-            if pos and pos[0] + pos[1] > 0: matrix[pos[0]][-1-pos[1]] = values[1]
-        return matrix
+# Consider the opponent pacman and his surrounding area as walls
+class FleeProblem(PositionSearchProblem):
+    def __init__(self, gameState, startState, opponent, costFn = lambda x: 1, goal=(1,1), start=None, warn=True, visualize=True):
+        """
+        Stores the start and goal.
 
-    def getStateVolume(self, state):
-        '''
-        stack all the matices
-        :return: an input volume w*h*7
-        '''
-        matrices = []
+        gameState: A GameState object (pacman.py)
+        costFn: A function from a search state (tuple) to a non-negative number
+        goal: A position in the gameState
+        """
+        self.walls = gameState.getWalls()
+        (x,y) = opponent
+        self.walls[x][y] = True
+        self.walls[x+1][y] = True
+        self.walls[x-1][y] = True
+        self.walls[x][y+1] = True
+        self.walls[x][y-1] = True
+        self.startState = startState
+        if start != None: self.startState = start
+        self.goal = goal
+        self.costFn = costFn
+        self.visualize = visualize
 
-        matrices.append(self.wall_matrix)
-        matrices.append(self.getFoodMatrix(state))
-        matrices.append(self.getCapsuleMatrix(state))
-        matrices.append(self.getMyPositionMatrix(state))
-        matrices.append(self.getPacmanMatrix(state))
-        matrices.append(self.getGhostMatrix(state))
-        matrices.append(self.getScaredGhost(state))
-
-        state_volume = np.stack(matrices, axis=2)
-        assert state_volume.shape == (self.maze_dim[0], self.maze_dim[1], 7)
-        return state_volume
-
-    def getActionIndex(self, direction):
-        if direction == Directions.STOP: return 0.
-        elif direction == Directions.NORTH: return 1.
-        elif direction == Directions.SOUTH: return 2.
-        elif direction == Directions.WEST: return 3.
-        elif direction == Directions.EAST: return 4.
-        else: return 0
-
-    def getDirection(self, action_index):
-        if action_index == 0.: return Directions.STOP
-        elif action_index == 1.: return Directions.NORTH
-        elif action_index == 3.: return Directions.SOUTH
-        elif action_index == 4.: return Directions.WEST
-        elif action_index == 5.: return Directions.EAST
-        else: return Directions.STOP
-
-    def eligibility_trace(self, batch):
-        gamma = 0.99
-        inputs = []
-        targets = []
-        for series in batch:  # series --> one history containing n steps
-            input = np.array([series[0].state, series[-1].state], dtype=np.float32)
-            output = self.controller.brain.forward(input)
-            cumulated_reward = np.max(output[1])
-            for step in reversed(series[:-1]):
-                cumulated_reward = step.reward + gamma * cumulated_reward
-            state = series[0].state
-            target = output[0].data
-            target[series[0].action] = cumulated_reward
-            inputs.append(state)
-            targets.append(target)
-        return np.array(inputs, dtype=np.float32), np.array(targets, dtype=np.float32)
-
-    def train(self):
-        print("=============Episode{}==============".format(self.controller.brain.numTrained+1))
-        print("Start training... ReplayMemory size: {}".format(len(self.memory.buffer)))
-        epochs = round(len(self.memory.buffer)/32) + 1
-        for i in range(epochs):
-            for batch in self.memory.sample_batch(32):  # batch size is 32
-                inputs, targets = self.eligibility_trace(batch)  # input should be tensors
-                # print("inputs shape: {},  targets shape: {}".format(inputs.shape, targets.shape))
-                self.controller.brain.batch_learn(inputs, targets)
-        step_average = np.mean(self.n_steps.rewards)
-        print("Episode: %s,   Step Average Reward: %s" % (str(i), str(step_average)))
-        self.controller.brain.save(replace=True)
-
-
-class InvaderConvDQN(BasicAgentConvDQN):
-    """
-    reward plan:
-        1. eat a food dot:  +1
-        2. eat a capsule: + 0.8
-        3. kill a scared ghost: +0.4
-        4. win a game: +100
-        5. eaten by a ghost: -1.2
-        6. eaten an opponents +0.8
-        7. lose a game: -100
-    """
-    def calculateRewardForPrevAction(self, gameState):
-        return np.random.randint(-20, 20)
-
-
-class DefenderConvDQN(BasicAgentConvDQN):
-    """
-    reward plan:
-        1. eat a food dot:  +0.3
-        2. eat a capsule: + 0.2
-        3. kill a scared ghost: +0.4
-        4. kill an opponent pacman: +1
-        5. win a game: +100
-        6. eaten by a ghost: -2
-        7. eaten an opponents +0.8
-        8. lose a game: -100
-    """
-    def calculateRewardForPrevAction(self, gameState):
-        return np.random.randint(-20, 20)
-
+        # For display purposes
+        self._visited, self._visitedlist, self._expanded = {}, [], 0 # DO NOT CHANGE
