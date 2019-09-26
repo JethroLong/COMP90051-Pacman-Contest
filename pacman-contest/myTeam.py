@@ -408,7 +408,7 @@ class ConvDQN():
     def __init__(self, invader, model_file=None):
         self.numTrained = 0
         self.state_size = (32, 16, 7)
-        self.num_actions = 5 # [stop, north, south, west, east]
+        self.num_actions = 4 # [north, south, west, east]
         self.gamma = 0.95    # discount rate
         self.epsilon = 1.0  # exploration rate
         self.epsilon_min = 0.01
@@ -635,7 +635,8 @@ class BasicAgentConvDQN(CaptureAgent):
         # Initialize AI
         self.controller = AI(brain=ConvDQN(invader=invader), body=SoftmaxBody(T=2.0))
         self.n_steps = NStepProgress(n_step=10)
-        self.memory = ReplayMemory(capacity=2000)
+        self.memory = ReplayMemory(capacity=100000)
+        self.tiny_memory = ReplayMemory(capacity=128)
 
         # One game episode stats
         self.maze_dim = None
@@ -695,7 +696,7 @@ class BasicAgentConvDQN(CaptureAgent):
         candidate_action = self.getDirection(candidate_action_index)
         # print("Action {}: {}".format(candidate_action_index, candidate_action))
         legal_act = gameState.getLegalActions(self.index)
-        self.prev_action = candidate_action_index # record the action made regardless of legality
+        self.prev_action = candidate_action_index  # record the action made regardless of legality
         self.legal_prev_action = candidate_action in legal_act
         if candidate_action not in legal_act:
             # random_choose_legal = np.random.choice(legal_act, 1)
@@ -736,6 +737,12 @@ class BasicAgentConvDQN(CaptureAgent):
         histoies = self.n_steps.yieldsHistory(oneStep=prev_step)
         if histoies:
             self.memory.push(histoies)
+            self.tiny_memory.push(histoies)
+
+        for batch in self.tiny_memory.sample_batch(8):  # batch size is 8
+            inputs, targets = self.eligibility_trace(batch)  # input should be tensors
+            # print("inputs shape: {},  targets shape: {}".format(inputs.shape, targets.shape))
+            self.controller.brain.batch_learn(inputs, targets)
 
         # update state and score,  when stats from previous move recorded
         self.prev_state = gameState.deepCopy()
@@ -901,20 +908,18 @@ class BasicAgentConvDQN(CaptureAgent):
         return state_volume
 
     def getActionIndex(self, direction):
-        if direction == Directions.STOP: return 0
-        elif direction == Directions.NORTH: return 1
-        elif direction == Directions.SOUTH: return 2
-        elif direction == Directions.WEST: return 3
-        elif direction == Directions.EAST: return 4
-        else: return 0
+        if direction == Directions.NORTH: return 0
+        elif direction == Directions.SOUTH: return 1
+        elif direction == Directions.WEST: return 2
+        elif direction == Directions.EAST: return 3
+        else: return None
 
     def getDirection(self, action_index):
-        if action_index == 0: return Directions.STOP
-        elif action_index == 1: return Directions.NORTH
-        elif action_index == 2: return Directions.SOUTH
-        elif action_index == 3: return Directions.WEST
-        elif action_index == 4: return Directions.EAST
-        else: return Directions.STOP
+        if action_index == 0: return Directions.NORTH
+        elif action_index == 1: return Directions.SOUTH
+        elif action_index == 2: return Directions.WEST
+        elif action_index == 3: return Directions.EAST
+        else: return None
 
     def eligibility_trace(self, batch):
         gamma = 0.99
@@ -934,7 +939,7 @@ class BasicAgentConvDQN(CaptureAgent):
         return np.array(inputs, dtype=np.float32), np.array(targets, dtype=np.float32)
 
     def train(self):
-        if self.memory.__len__() > 16:
+        if self.memory.__len__() > 5000:
             print("========================Episode {}========================".format(self.controller.brain.numTrained))
             print("Local Episode: {},   Reward: {},   Step Reward Average: {}".format(str(self.local_episode_count+1), str(self.cumulated_rewards), str(self.cumulated_rewards / self.num_of_step)))
             print("Start training...                  ReplayMemory size: {} ".format(len(self.memory.buffer)))
@@ -952,16 +957,15 @@ REWARD_BASE = 1
 class InvaderConvDQN(BasicAgentConvDQN):
     """
     reward weights plan:
-        1. eat a food dot:  2
-        2. eat a capsule: 5
+        1. eat a food dot:  5
+        2. eat a capsule: 7
         3. kill a scared ghost: ?
         4. win a game: 100
-        5. eaten by a ghost: weighted (food loss)
-        6. eaten an opponents: ?
+        5. eaten by a ghost: -10
+        6. eaten an opponents: 10
         7. lose a game: -100
-        8. Intention to cross boarder: distance change of an action
-        9. cross boarder: 3
-        10. living bonus or penalty: 0.2
+        8. closer to boarder when not pacman
+        10. living bonus or penalty: at home
     """
 
     def getFeatures(self, gameState):
@@ -982,8 +986,8 @@ class InvaderConvDQN(BasicAgentConvDQN):
         # live_reward_base = 0.2
         # reward = REWARD_BASE
 
-        def legalActionReward():
-            return 0 if self.legal_prev_action else -2
+        # def legalActionReward():
+        #     return 1 if self.legal_prev_action else -1
 
         def capsuleFoodReward(agent):
             myCapsules = agent.prev_state.data.capsules
@@ -993,10 +997,10 @@ class InvaderConvDQN(BasicAgentConvDQN):
                 return 0
             if isPacmanPrev:
                 if myCapsules and prevMyPosition in myCapsules:
-                    return 10
+                    return 15
                 # elif agent.prev_state.data.food[x][y]:
                 elif prevMyPosition == self.prev_state.data._foodEaten:
-                    return 7
+                    return 10
             return 0
 
         def travelReward(agent):
@@ -1005,33 +1009,30 @@ class InvaderConvDQN(BasicAgentConvDQN):
                 x1, _ = prevMyPosition
                 x2, _ = myPosition
                 delta_x = x2 - x1
+            if myPosition == prevMyPosition: return -2
             if not isPacmanPrev:  # at home previously
-                if agent.prev_action == 0:  # not intend to move
-                    return -3
-                else:
-                    # Action: 0,1,2,3,4 -> STOP,N,S,W,E
+                if agent.prev_action == 0 or agent.prev_action == 1:  # vertical move
+                    return 0
+                else:  # horizontal move
+                    # Action: 0,1,2,3 -> N,S,W,E
                     if agent.red:  # red agent
-                        if agent.prev_action == 4:  # move to enemy
-                            return 2 if delta_x <= 0 else 4
-                        elif agent.prev_action == 3:  # move home
-                            return -2
-                        else:
-                            return 1  # North and South
+                        if agent.prev_action == 3:  # move to enemy
+                            return 0 if delta_x <= 0 else 2
+                        elif agent.prev_action == 2:  # move home
+                            return 0
                     else:  # blue agent
                         if agent.prev_action == 4:  # move home
-                            return -2
+                            return 0
                         elif agent.prev_action == 3:  # move to enemy
-                            return 2 if delta_x >= 0 else 4
-                        else:
-                            return 1  # North and South
+                            return 0 if delta_x >= 0 else 2
 
             else: # at enemy's territory previously
                 if agent.red:
-                    if agent.prev_action == 3:
-                        return -2 if prevAgentState.numCarrying < 1 else -1
+                    if agent.prev_action == 3:  # move home
+                        return -1 if prevAgentState.numCarrying < 2 else 2
                 else:
-                    if agent.prev_action == 4:
-                        return -2 if prevAgentState.numCarrying < 1 else -1
+                    if agent.prev_action == 4:  # move to enemy
+                        return -1 if prevAgentState.numCarrying < 2 else 2
             return 0
 
         def scaredReward(agent):
@@ -1044,7 +1045,7 @@ class InvaderConvDQN(BasicAgentConvDQN):
             if prevAgentState.scaredTimer > 0:
                 scaredTimerChange = abs(currAgentState.scaredTimer - prevAgentState.scaredTimer)
                 if currAgentState.scaredTimer < prevAgentState.scaredTimer:
-                    return -1
+                    return 0
                 else:
                     if scaredTimerChange > 1:
                         return 5
@@ -1057,16 +1058,15 @@ class InvaderConvDQN(BasicAgentConvDQN):
             :param agent:
             :return:
             """
-
-            if isPacmanPrev: # isPacman
+            if isPacmanPrev:  # isPacman
                 # if manhattanDistance(myPosition, prevMyPosition) > 1:
                 if not prevMyPosition:
-                    return -20
+                    return -10
             else: # isGhost ,  gain 5 if previously scared and got killed now
                 scaredTimerChange = abs(currAgentState.scaredTimer - prevAgentState.scaredTimer)
                 if scaredTimerChange > 1:
                     if prevAgentState.scaredTimer > 0:
-                        return 10  # bonus, as the agent can be back to normal asap
+                        return 0  # bonus, as the agent can be back to normal asap
             return 0
 
         def killReward(agent):
@@ -1086,7 +1086,8 @@ class InvaderConvDQN(BasicAgentConvDQN):
                         if manhattanDistance(pacPos, prevMyPosition) <= 0.7:
                             if prevAgentState.scaredTimer <= 0:  # kill enemy pacman
                                 return 20
-                else: # is pacman previously
+
+                else:  # is pacman previously
                     for index in agent.getOpponents(self.prev_state):
                         otherAgentState = self.prev_state.data.agentStates[index]
                         if otherAgentState.isPacman: continue
@@ -1094,7 +1095,7 @@ class InvaderConvDQN(BasicAgentConvDQN):
                         if pacPos == None: continue
                         if manhattanDistance(pacPos, prevMyPosition) <= 0.7:
                             if otherAgentState.scaredTimer > 0:  # kill an scared ghost
-                                return -2
+                                return 0
             return 0
 
         def lossReward(agent):
@@ -1116,26 +1117,29 @@ class InvaderConvDQN(BasicAgentConvDQN):
             #         alpha = 1.5 * (lossGain - live_reward_base) \
             #             if agent.current_score < 0 else (lossGain + live_reward_base)
             #         return 1 + alpha
+
             return self.current_score - self.prev_score
 
         def gameWinReward(agent):
             if gameState.data._win:
                 print("Game end, I'm red?  {},  my score is: {}".format(agent.red, gameState.getScore() if self.red else -1*gameState.getScore()))
                 if gameState.getScore() == 0:
-                    return 10
+                    return 0
                 elif gameState.getScore() > 0:
-                    return 100 if agent.red else -100
+                    return 100 if agent.red else 0
                 elif gameState.getScore() < 0:
-                    return -100 if agent.red else 100
+                    return 0 if agent.red else 100
             return 0
 
         def livingReward(agent):
             boarder_dist_bias = abs(boarder_x - prevMyPosition[0]) if prevMyPosition else boarder_x
             step_bias = 0 if agent.prev_score >= 0 else self.num_of_step
             if isPacmanPrev:
-                return 1+0.2*(np.sqrt(self.num_of_step + boarder_dist_bias))
+                # return 1+0.2*(np.sqrt(self.num_of_step + boarder_dist_bias))
+                return 1
             else:
-                return -1-0.2*(np.sqrt(self.num_of_step + boarder_dist_bias))
+                # return -1-0.2*(np.sqrt(self.num_of_step + boarder_dist_bias))
+                return 0
 
         # calculate defined feature values
         features["CapsuleFood"] = capsuleFoodReward(self)
@@ -1144,7 +1148,7 @@ class InvaderConvDQN(BasicAgentConvDQN):
         features["Loss"] = lossReward(self)
         features["KillEnemy"] = killReward(self)
         features["Death"] = deathReward(self)
-        features["LegalAction"] = legalActionReward()
+        # features["LegalAction"] = legalActionReward()
         features["GameWin"] = gameWinReward(self)
         features["LivingReward"] = livingReward(self)
 
@@ -1153,13 +1157,13 @@ class InvaderConvDQN(BasicAgentConvDQN):
     def getWeights(self, gameState):
         weights = {
             "CapsuleFood": 1,
-            "Travel": 1,
-            "ScaredMode": 1,
+            "Travel": 0,
+            "ScaredMode": 0,
             "Loss": 1,
             "KillEnemy": 1,
             "Death": 1,
             "LivingReward": 1,
-            "LegalAction": 1,
+            # "LegalAction": 1,
             "GameWin": 1
         }
         return weights
