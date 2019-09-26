@@ -16,6 +16,9 @@ from captureAgents import CaptureAgent
 import random, time, util
 from game import Directions
 import game
+from util import nearestPoint
+import re, os
+
 
 #################
 # Team creation #
