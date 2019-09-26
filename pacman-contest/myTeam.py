@@ -521,6 +521,8 @@ class WaStarInvader(DummyAgent):
             print()
             updatedGameState.data.layout.walls = original_wall_grids
             gameState = updatedGameState
+            if actions[0] is None:
+                print("None Action 0")
             return actions[0]
         
         
@@ -600,6 +602,8 @@ class WaStarInvader(DummyAgent):
                 print()
                 updatedGameState.data.layout.walls = original_wall_grids
                 gameState = updatedGameState
+                if actions[0] is None:
+                    print("None Action 1")
                 return actions[0]
             closestFoodProblem = PositionSearchProblem(updatedGameState, updatedGameState.getAgentPosition(self.index), goal=closestFood)
             actions = wastarSearch(closestFoodProblem, manhattanHeuristic)
@@ -622,6 +626,8 @@ class WaStarInvader(DummyAgent):
             print()
             updatedGameState.data.layout.walls = original_wall_grids
             gameState = updatedGameState
+            if actions[0] is None:
+                print("None Action 2")
             return actions[0]
         
         
@@ -677,6 +683,8 @@ class WaStarInvader(DummyAgent):
                 print()
                 updatedGameState.data.layout.walls = original_wall_grids
                 gameState = updatedGameState
+                if actions[0] is None:
+                    print("None Action 3")
                 return actions[0]
             closestSafe, distance = self.closestObject(safeList, updatedGameState)
             if closestSafe is not None:
@@ -729,6 +737,8 @@ class WaStarInvader(DummyAgent):
             print()
             updatedGameState.data.layout.walls = original_wall_grids
             gameState = updatedGameState
+            if actions[0] is None:
+                print("None Action 4")
             return actions[0]
         
         
@@ -795,6 +805,8 @@ class WaStarInvader(DummyAgent):
                 print()
                 updatedGameState.data.layout.walls = original_wall_grids
                 gameState = updatedGameState
+                if actions[0] is None:
+                    print("None Action 5")
                 return actions[0]
             
             closestFood, distance = self.closestObject(goodList, updatedGameState)
@@ -833,6 +845,8 @@ class WaStarInvader(DummyAgent):
             print()
             updatedGameState.data.layout.walls = original_wall_grids
             gameState = updatedGameState
+            if actions[0] is None:
+                print("None Action 6")
             return actions[0]
         
         
@@ -877,6 +891,8 @@ class WaStarInvader(DummyAgent):
             print()
             updatedGameState.data.layout.walls = original_wall_grids
             gameState = updatedGameState
+            if actions[0] is None:
+                print("None Action 7")
             return actions[0]
            
     def updateScore(self, gameState):
