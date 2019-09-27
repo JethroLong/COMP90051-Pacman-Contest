@@ -370,6 +370,17 @@ class WaStarInvader(DummyAgent):
         wallList = gameState.getWalls().asList()
         if coordinate in wallList:
             return False
+        """
+        opponentList = self.getOpponentList(gameState)
+        closestOpponentDistance = sys.maxsize
+        for opponent in opponentList:
+            if opponent is not None:
+                tempDistance = self.getMazeDistance(opponent, coordinate)
+                if tempDistance < closestOpponentDistance:
+                    closestOpponentDistance = tempDistance
+        if self.isWallCorderCoordinate(coordinate, wallList) and closestOpponentDistance >= 3:
+            return True
+        """
         x, y = coordinate[0], coordinate[1]
         legalAction = self.getLegalActionOfPosition(coordinate, gameState)
         if len(legalAction) <= 1:
@@ -405,8 +416,25 @@ class WaStarInvader(DummyAgent):
                 return True
         return False
     
-    def isWallCorderCoordinate(self, gameState):
-        pass # TODO 
+    def isWallCorderCoordinate(self, coordinate, wallList):
+        x, y = coordinate[0], coordinate[1]
+        coordinateNorth = (x, y + 1)
+        coordinateSouth = (x, y - 1)
+        coordinateWest = (x - 1, y)
+        coordinateEast = (x + 1, y)
+        wallCount = 0
+        if coordinateNorth in wallList:
+            wallCount += 1
+        if coordinateSouth in wallList:
+            wallCount += 1
+        if coordinateWest in wallList:
+            wallCount += 1
+        if coordinateEast in wallList:
+            wallCount += 1
+        if wallCount == 3:
+            return True
+        return False
+        
     
     def retreat(self, gameState):
         width, height = self.getWidthandHeight(gameState)
