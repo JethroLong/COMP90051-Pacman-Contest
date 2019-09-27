@@ -10,7 +10,6 @@
 # (denero@cs.berkeley.edu) and Dan Klein (klein@cs.berkeley.edu).
 # Student side autograding was added by Brad Miller, Nick Hay, and
 # Pieter Abbeel (pabbeel@cs.berkeley.edu).
-# test test
 import sys
 
 from captureAgents import CaptureAgent
@@ -979,111 +978,156 @@ class WaStarDefender(DummyAgent):
       Defender Behavior design:
       1. Patrol around home area -- search and chase pacman (priority: High)
       2.
-  
+
     """
-    mode = "goDefendingFood"
-    initialPosition = None
-    oppInitialPosition = None
-    myZone = None  # Safe space
-    opponentPosition = None
-    sacrifice = False
+
+    def __init__(self, index):
+        super().__init__(index)
+
+        # Layout related
+        self.maze_dim = None
+        self.boarder_mid = None
+
+        # game state variables
+        self.initialPosition = None
+        self.currentPosition = None
+        self.opponentIndices = None
+
+    def registerInitialState(self, gameState):
+        """
+        This func will be called when:
+            > the first time the chosen agent obj was created
+            > at the beginning of each new game
+        :param gameState: the initial game state
+        """
+        CaptureAgent.registerInitialState(self, gameState)
+
+        # dimensions of the grid world w * h
+        self.maze_dim = (gameState.data.layout.width, gameState.data.layout.height)
+        half_width = self.maze_dim[0] // 2
+        if self.maze_dim[0] < half_width:
+            self.boarder_mid = (half_width - 2, self.maze_dim[1] // 2)
+        else:
+            self.boarder_mid = (half_width, self.maze_dim[1] // 2)
+
+        self.opponentIndices = self.getOpponents(gameState)
+
+        self.start = gameState.getAgentPosition(self.index)
+        self.initialPosition = gameState.getAgentPosition(self.index)
 
     def chooseAction(self, gameState):
-        # The first time to choose an action
-        currentPosition = gameState.getAgentPosition(self.index)
-        if not self.initialPosition:
-            self.initialPosition = currentPosition
-            width, height = self.getWidthandHeight(gameState)
-            if self.initialPosition == (1, 1):
-                self.oppInitialPosition = (width - 2, height - 2)
-                self.myZone = range(int(width / 2))
-            else:
-                self.oppInitialPosition = (1, 1)
-                self.myZone = range(int(width / 2), int(width))
-        opponents = self.getOpponents(gameState)  # the indexes of opponents
-    
-        # To determine the mode
-        if not self.sacrifice:
-            for opponent in opponents:
-                # if in observable area
-                if gameState.getAgentPosition(opponent):
-                    # if the agent is not scared
-                    if gameState.getAgentState(self.index).scaredTimer <= 0:
-                        # if the opponent invades
-                        if gameState.getAgentPosition(opponent)[0] in self.myZone:
-                            self.mode = "huntOpponent"
-                            self.opponentPosition = gameState.getAgentPosition(opponent)
-                            break
-                        else:
-                            self.mode = "goDefendingFood"
-                    else:
-                        self.opponentPosition = gameState.getAgentPosition(opponent)
-                        d = self.getMazeDistance(self.initialPosition, currentPosition)
-                        if d < gameState.getAgentState(self.index).scaredTimer - 2:
-                            self.sacrifice = True
-                            self.mode = "sacrifice"
-                        else:
-                            self.mode = "flee"
-                        break
-                # if no opponents in observable area
-                else:
-                    self.mode = "goDefendingFood"
-    
-        if self.mode == "sacrifice":
-            goHomeProblem = PositionSearchProblem(gameState, currentPosition, goal=self.opponentPosition)
-            actions = wastarSearch(goHomeProblem, manhattanHeuristic)
-            if len(actions) > 0:
-                return actions[0]
-            else:
-                self.sacrifice = False
-                self.mode == "goDefendingFood"
-    
-        # When the agent does not find any invader
-        if self.mode == "goDefendingFood":
-            currentPosition = currentPosition
-            foodDefending, distance = self.closestObjectUsingPosition(self.getFoodYouAreDefending(gameState).asList(),
-                                                                      self.oppInitialPosition)
-            defendFoodProblem = PositionSearchProblem(gameState, currentPosition, goal=foodDefending)
-            actions = wastarSearch(defendFoodProblem, manhattanHeuristic)
-            if len(actions) > 0:
-                return actions[0]
-            else:
-                return 'Stop'
-        '''
+        """
+        The func as the agent's turn commences, choose action accordingly based on
+        what mode hs is currently in：
+           > As a normal ghost, patrol around by default
+             Actions to perform:
+                > hunt(), if any enemy pacman detected
+                > defend(), if no enemy pacman found
+
+           > As a scared ghost:
+                > suicide and expects re-spawning asap, if scared recently
+                > flee, if scared for some time
+        """
+        # update current status
+        self.currentPosition = gameState.getAgentPosition(self.index)
+
+        invaders = self.searchInvadersPosition(gameState)
+        print("invaders: ", invaders)
+        if invaders:
+            if gameState.getAgentState(self.index).scaredTimer <= 0:  # As a normal ghost
+                return self.hunt(gameState, invaders)
+            else:  # As a scared ghost
+                return self.scaredAction(gameState, invaders)
+        else:
+            return self.defend(gameState)  # routine patrol
+
+    def searchInvadersPosition(self, gameState):
+        """
+        Search all observable invaders (enemy pacmans)
+        :param gameState:
+        :return: a list of invader position if any, or an empty list
+        """
+        invaders = []
+        for opponent in self.opponentIndices:
+            # if in observable area
+            if gameState.getAgentPosition(opponent):
+                # if the opponent invades
+                if gameState.getAgentState(opponent).isPacman:
+                    invaders.append(gameState.getAgentPosition(opponent))
+        return invaders
+
+    def scaredAction(self, gameState, invaders):
+        """
+         Actions a scared ghost may perform.
+        :param gameState:
+        :param invaders: a list of invader position if any, or an empty list
+        """
+        # Pick nearest enemy
+        enemyPosition = sorted(invaders, key=lambda pos: pow(pos[0] - self.currentPosition[0], 2) + pow(
+            pos[1] - self.currentPosition[1], 2))[0]
+        d = self.getMazeDistance(self.initialPosition, self.currentPosition)
+        if d < gameState.getAgentState(self.index).scaredTimer - 2:
+            self.suicide(gameState, enemyPosition)
+        else:
+            self.flee(gameState, enemyPosition)
+
+    def suicide(self, gameState, enemyPosition):
+        goHomeProblem = PositionSearchProblem(gameState, self.currentPosition, goal=enemyPosition)
+        actions = wastarSearch(goHomeProblem, manhattanHeuristic)
+        if len(actions) > 0:
+            return actions[0]
+        else:
+            self.defend(gameState)
+
+    def defend(self, gameState):
+        # foodDefending, distance = self.farthestObjectUsingPosition(self.getFoodYouAreDefending(gameState).asList(),
+        #                                                            self.initialPosition)
+        defendFoodProblem = PositionSearchProblem(gameState, self.currentPosition, goal=self.boarder_mid)
+        actions = wastarSearch(defendFoodProblem, manhattanHeuristic)
+        if len(actions) > 0:
+            return actions[0]
+        else:
+            return Directions.STOP
+
+    def flee(self, gameState, enemyPosition):
+        foodDefending, distance = self.closestObjectUsingPosition(self.getFoodYouAreDefending(gameState).asList(),
+                                                                  enemyPosition)
+        fleeProblem = FleeProblem(gameState, self.currentPosition, enemyPosition, goal=foodDefending)
+        actions = wastarSearch(fleeProblem, manhattanHeuristic)
+        if len(actions) > 0:
+            return actions[0]
+        else:
+            return Directions.STOP
+
+    def hunt(self, gameState, invaders):
+        """
         Actually it is defending food from opponent rather than hunting opponent
         hunting mode
         logic 1: Set the pacman's closet food as the goal
         logic 2: Set the pacman's position as the goal
+        """
+
+        ''' 1
+        foodDefending, distance = self.closestObjectUsingPosition(self.getFoodYouAreDefending(gameState).asList(),
+                                                                  self.opponentPosition)
+        defendFoodProblem = PositionSearchProblem(gameState, gameState.getAgentPosition(self.index), goal=foodDefending)
+        actions = wastarSearch(defendFoodProblem, manhattanHeuristic)
+        if len(actions) > 0:
+            return actions[0]
+        else:
+            return 'Stop'
         '''
-        if self.mode == "huntOpponent":
-            ''' 1
-            foodDefending, distance = self.closestObjectUsingPosition(self.getFoodYouAreDefending(gameState).asList(),
-                                                                      self.opponentPosition)
-            defendFoodProblem = PositionSearchProblem(gameState, gameState.getAgentPosition(self.index), goal=foodDefending)
-            actions = wastarSearch(defendFoodProblem, manhattanHeuristic)
-            if len(actions) > 0:
-                return actions[0]
-            else:
-                return 'Stop'
-            '''
-            defendFoodProblem = PositionSearchProblem(gameState, currentPosition,
-                                                      goal=self.opponentPosition)
-            actions = wastarSearch(defendFoodProblem, manhattanHeuristic)
-            if len(actions) > 0:
-                return actions[0]
-            else:
-                return 'Stop'
-    
-        if self.mode == "flee":
-            foodDefending, distance = self.closestObjectUsingPosition(self.getFoodYouAreDefending(gameState).asList(),
-                                                                      self.opponentPosition)
-            fleeProblem = FleeProblem(gameState, currentPosition, self.opponentPosition,
-                                      goal=foodDefending)
-            actions = wastarSearch(fleeProblem, manhattanHeuristic)
-            if len(actions) > 0:
-                return actions[0]
-            else:
-                return 'Stop'
+        # Pick the nearest invader to hunt
+        target = sorted(invaders,
+                        key=lambda pos: pow(pos[0] - self.currentPosition[0], 2) + pow(pos[1] - self.currentPosition[1],
+                                                                                       2))[0]
+
+        defendFoodProblem = PositionSearchProblem(gameState, self.currentPosition, goal=target)
+        actions = wastarSearch(defendFoodProblem, manhattanHeuristic)
+        if len(actions) > 0:
+            return actions[0]
+        else:
+            return Directions.STOP
 
     def farthestObjectUsingPosition(self, listOfObjects, currentPosition):
         farthestObj = None
@@ -1104,7 +1148,6 @@ class WaStarDefender(DummyAgent):
 
     def getWeights(self, gameState, action):
         pass
-
 
 ###################################
 #        Helper Funcs
