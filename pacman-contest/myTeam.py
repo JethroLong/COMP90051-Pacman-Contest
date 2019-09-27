@@ -484,6 +484,22 @@ class WaStarInvader(DummyAgent):
                         wallList.append((x, y - 1))
                         wall_grids[x][y - 1] = True
 
+        if gameState.getAgentState(self.index).isPacman:
+            homeBorderThreshold = 3
+            boardWidth, boardHeight = self.getWidthandHeight(updatedGameState)
+            if self.red and int(boardWidth / 2) - homeBorderThreshold >= 0:
+                newBorderX = int(boardWidth / 2) - homeBorderThreshold
+                for h in range(boardHeight):
+                    if (newBorderX, h) not in wallList:
+                        wallList.append((newBorderX, h))
+                        wall_grids[newBorderX][h] = True
+            elif not self.red and int(boardWidth / 2) - 1 + homeBorderThreshold < boardWidth:
+                newBorderX = int(boardWidth / 2) - 1 + homeBorderThreshold
+                for h in range(boardHeight):
+                    if (newBorderX, h) not in wallList:
+                        wallList.append((newBorderX, h))
+                        wall_grids[newBorderX][h] = True
+        
         combined_wall_grid = game.Grid(grid_width, grid_height, False)
         for i in range(grid_width):
             for j in range(grid_height):
