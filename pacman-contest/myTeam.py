@@ -362,6 +362,44 @@ class WaStarInvader(DummyAgent):
             actions.append("Stop")
         return actions
     
+    def bestAvoidGhostAction(self, currentPosition, wallList, opponentList):
+        closestOpponent = None
+        closestOpponentDistance = sys.maxsize
+        for opponent in opponentList:
+            tempDistance = self.getMazeDistance(currentPosition, opponent)
+            if tempDistance < closestOpponentDistance:
+                closestOpponent = opponent
+                closestOpponentDistance = tempDistance
+        if closestOpponent is not None:
+            distanceToGhost = -1 * sys.maxsize + 1
+            wisestAction = None
+            x, y = currentPosition[0], currentPosition[1]
+            if (x + 1, y) not in wallList:
+                tempDistance = self.getMazeDistance((x + 1, y), closestOpponent)
+                if tempDistance > distanceToGhost:
+                    distanceToGhost = tempDistance
+                    wisestAction = "East"
+            if (x - 1, y) not in wallList:
+                tempDistance = self.getMazeDistance((x - 1, y), closestOpponent)
+                if tempDistance > distanceToGhost:
+                    distanceToGhost = tempDistance
+                    wisestAction = "West"
+            if (x, y + 1) not in wallList:
+                tempDistance = self.getMazeDistance((x, y + 1), closestOpponent)
+                if tempDistance > distanceToGhost:
+                    distanceToGhost = tempDistance
+                    wisestAction = "North"
+            if (x, y - 1) not in wallList:
+                tempDistance = self.getMazeDistance((x, y - 1), closestOpponent)
+                if tempDistance > distanceToGhost:
+                    distanceToGhost = tempDistance
+                    wisestAction = "South"
+            if wisestAction is None:
+                return self.chooseLegalRandomAction(currentPosition, wallList)[0]
+            return wisestAction
+        else:
+            return self.chooseLegalRandomAction(currentPosition, wallList)[0]
+    
     def isSafeCoordinate(self, coordinate, gameState):
         """
         Decide whether the given coordinate is safe or not,
@@ -378,7 +416,7 @@ class WaStarInvader(DummyAgent):
                 tempDistance = self.getMazeDistance(opponent, coordinate)
                 if tempDistance < closestOpponentDistance:
                     closestOpponentDistance = tempDistance
-        if self.isWallCorderCoordinate(coordinate, wallList) and closestOpponentDistance >= 3:
+        if self.isWallCornerCoordinate(coordinate, wallList) and closestOpponentDistance >= 3:
             return True
         """
         x, y = coordinate[0], coordinate[1]
@@ -416,24 +454,8 @@ class WaStarInvader(DummyAgent):
                 return True
         return False
     
-    def isWallCorderCoordinate(self, coordinate, wallList):
-        x, y = coordinate[0], coordinate[1]
-        coordinateNorth = (x, y + 1)
-        coordinateSouth = (x, y - 1)
-        coordinateWest = (x - 1, y)
-        coordinateEast = (x + 1, y)
-        wallCount = 0
-        if coordinateNorth in wallList:
-            wallCount += 1
-        if coordinateSouth in wallList:
-            wallCount += 1
-        if coordinateWest in wallList:
-            wallCount += 1
-        if coordinateEast in wallList:
-            wallCount += 1
-        if wallCount == 3:
-            return True
-        return False
+    def isWallCornerCoordinate(self, coordinate, wallList):
+        pass
         
     
     def retreat(self, gameState):
@@ -460,7 +482,8 @@ class WaStarInvader(DummyAgent):
             # actions.append("Stop")
             # Don't Stop, stop is the most stupidest move
             print("Empty Action List, Random Select Legal Actions")
-            actions = self.chooseLegalRandomAction(currentPosition, wallList)
+            # actions = self.chooseLegalRandomAction(currentPosition, wallList)
+            actions = list(self.bestAvoidGhostAction(currentPosition, wallList, self.getOpponentList(gameState)))
         print("Action: " + actions[0])
         print("===============================")
         print()
@@ -728,7 +751,8 @@ class WaStarInvader(DummyAgent):
                 actions = self.retreat(updatedGameState)
                 print("Go Home")
                 if len(actions) == 0:
-                    actions = self.chooseLegalRandomAction(currentPosition, wallList)
+                    # actions = self.chooseLegalRandomAction(currentPosition, wallList)
+                    actions = list(self.bestAvoidGhostAction(currentPosition, wallList, self.getOpponentList(gameState)))
                 print("Action: " + str(actions[0]))
                 return actions[0]
             
@@ -746,7 +770,8 @@ class WaStarInvader(DummyAgent):
                 actions = self.retreat(updatedGameState)
                 if len(actions) == 0:
                     print("Empty Action List, Random Select Legal Actions")
-                    actions = self.chooseLegalRandomAction(currentPosition, wallList)
+                    # actions = self.chooseLegalRandomAction(currentPosition, wallList)
+                    actions = list(self.bestAvoidGhostAction(currentPosition, wallList, self.getOpponentList(gameState)))
             print("Action: " + actions[0])
             print("===============================")
             print()
@@ -787,7 +812,8 @@ class WaStarInvader(DummyAgent):
                 if len(actions) == 0:
                     # actions.append("Stop")
                     print("Empty Action List, Random Select Legal Actions")
-                    actions = self.chooseLegalRandomAction(currentPosition, wallList)
+                    # actions = self.chooseLegalRandomAction(currentPosition, wallList)
+                    actions = list(self.bestAvoidGhostAction(currentPosition, wallList, self.getOpponentList(gameState)))
                 print("Action: " + actions[0])
                 print("===============================")
                 print()
@@ -812,7 +838,8 @@ class WaStarInvader(DummyAgent):
             if len(actions) == 0:
                 actions = self.retreat(updatedGameState)
                 if len(actions) == 0:
-                    actions = self.chooseLegalRandomAction(currentPosition, wallList)
+                    # actions = self.chooseLegalRandomAction(currentPosition, wallList)
+                    actions = list(self.bestAvoidGhostAction(currentPosition, wallList, self.getOpponentList(gameState)))
             print("Action: " + actions[0])
             print("Capsule Eaten: " + str(updatedGameState.data._capsuleEaten))
             print("Scared Timer: " + str(scaredTime))
