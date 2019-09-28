@@ -1004,16 +1004,17 @@ class WaStarDefender(DummyAgent):
 
         # dimensions of the grid world w * h
         self.maze_dim = (gameState.data.layout.width, gameState.data.layout.height)
-        half_width = self.maze_dim[0] // 2
-        if self.maze_dim[0] < half_width:
-            self.boarder_mid = (half_width - 2, self.maze_dim[1] // 2)
-        else:
-            self.boarder_mid = (half_width, self.maze_dim[1] // 2)
 
         self.opponentIndices = self.getOpponents(gameState)
 
         self.start = gameState.getAgentPosition(self.index)
         self.initialPosition = gameState.getAgentPosition(self.index)
+        half_width = self.maze_dim[0] // 2
+        # If the initial position is on the right side
+        if self.initialPosition[0] > half_width:
+            self.boarder_mid = (half_width, self.maze_dim[1] // 2)
+        else:
+            self.boarder_mid = (half_width - 1, self.maze_dim[1] // 2)
 
     def chooseAction(self, gameState):
         """
@@ -1077,7 +1078,8 @@ class WaStarDefender(DummyAgent):
         if len(actions) > 0:
             return actions[0]
         else:
-            self.defend(gameState)
+            # self.defend(gameState)
+            return 'Stop'
 
     def defend(self, gameState):
         # foodDefending, distance = self.farthestObjectUsingPosition(self.getFoodYouAreDefending(gameState).asList(),
@@ -1087,7 +1089,7 @@ class WaStarDefender(DummyAgent):
         if len(actions) > 0:
             return actions[0]
         else:
-            return Directions.STOP
+            return 'Stop'
 
     def flee(self, gameState, enemyPosition):
         foodDefending, distance = self.closestObjectUsingPosition(self.getFoodYouAreDefending(gameState).asList(),
@@ -1097,7 +1099,7 @@ class WaStarDefender(DummyAgent):
         if len(actions) > 0:
             return actions[0]
         else:
-            return Directions.STOP
+            return 'Stop'
 
     def hunt(self, gameState, invaders):
         """
