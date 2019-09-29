@@ -998,7 +998,8 @@ class WaStarDefender(DummyAgent):
         self.initialPosition = None
         self.currentPosition = None
         self.opponentIndices = None
-
+        self.searching = None
+        self.eatenFoods = None
     def registerInitialState(self, gameState):
         """
         This func will be called when:
@@ -1021,7 +1022,7 @@ class WaStarDefender(DummyAgent):
             self.boarder_mid = (half_width, self.maze_dim[1] // 2)
         else:
             self.boarder_mid = (half_width - 1, self.maze_dim[1] // 2)
-
+        self.myFood = self.getFoodYouAreDefending(gameState).asList()
     def chooseAction(self, gameState):
         """
         The func as the agent's turn commences, choose action accordingly based on
@@ -1041,6 +1042,7 @@ class WaStarDefender(DummyAgent):
         invaders = self.searchInvadersPosition(gameState)
         print("invaders: ", invaders)
         if invaders:
+            self.searching = False
             if gameState.getAgentState(self.index).scaredTimer <= 0:  # As a normal ghost
                 return self.hunt(gameState, invaders)
             else:  # As a scared ghost
@@ -1090,7 +1092,26 @@ class WaStarDefender(DummyAgent):
     def defend(self, gameState):
         # foodDefending, distance = self.farthestObjectUsingPosition(self.getFoodYouAreDefending(gameState).asList(),
         #                                                            self.initialPosition)
-        defendFoodProblem = PositionSearchProblem(gameState, self.currentPosition, goal=self.boarder_mid)
+        currentFood = self.getFoodYouAreDefending(gameState).asList()
+        if len(self.myFood) > len(currentFood) or self.searching:
+            self.searching = True
+            eatenFoods = [item for item in self.myFood if item not in currentFood]
+            if len(eatenFoods)==0:
+                eatenFoods = self.eatenFoods
+            else:
+                self.eatenFoods = eatenFoods
+            self.myFood = currentFood
+            return self.findInvader(gameState,eatenFoods[0])
+        else:
+            defendFoodProblem = PositionSearchProblem(gameState, self.currentPosition, goal=self.boarder_mid)
+            actions = wastarSearch(defendFoodProblem, manhattanHeuristic)
+            if len(actions) > 0:
+                return actions[0]
+            else:
+                return 'Stop'
+
+    def findInvader(self, gameState, foodEaten):
+        defendFoodProblem = PositionSearchProblem(gameState, self.currentPosition, goal=foodEaten)
         actions = wastarSearch(defendFoodProblem, manhattanHeuristic)
         if len(actions) > 0:
             return actions[0]
