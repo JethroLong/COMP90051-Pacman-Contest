@@ -234,6 +234,7 @@ class DummyAgent(CaptureAgent):
                 init = (p1, [])
                 open.push(init)
                 closed = []
+
                 while len(path[p1]) < len(valid_points):
                     currNode = open.pop()
                     currState = currNode[0]
@@ -241,6 +242,7 @@ class DummyAgent(CaptureAgent):
                     if currState not in closed:
                         closed.append(currState)
                         successors = []
+
                         x, y = currState
                         if not walls[x][y + 1]:
                             successors.append( ((x, y + 1), Directions.NORTH) )
@@ -254,6 +256,15 @@ class DummyAgent(CaptureAgent):
                             for each in successors:
                                 if currState not in path.keys(): path[currState] = {}
                                 if each[0] not in path.keys(): path[each[0]] = {}
+
+                                '''
+                                BFS Speed-up. Infer backwards from forward path
+                                Trick:
+                                    1. Reduced search space
+                                    2. Every one-step gives at most four
+                                     > Two for adjacency
+                                     > Two for init and one another 
+                                '''
                                 path[currState][each[0]] = [each[1]]
                                 path[each[0]][currState] = getReversedDirection([each[1]])
                                 temp = (each[0], currPath + [each[1]])
