@@ -62,10 +62,16 @@ class AgentFactory:
     def getAgent(self, index):
         # "Returns the agent for the provided index."
         # util.raiseNotDefined()
-        if index is 'WaStarInvader':
-            return WaStarInvader(index)
-        if index is 'WaStarDefender':
-            return WaStarDefender(index)
+        if self.isRed:
+            if index == "1":
+                return WaStarInvader(index)
+            elif index == "3":
+                return WaStarDefender(index)
+        else:
+            if index == "0":
+                return WaStarInvader(index)
+            elif index == "2":
+                return WaStarDefender(index)
 
 class DummyAgent(CaptureAgent):
     
