@@ -360,6 +360,8 @@ class WaStarInvader(DummyAgent):
             actions.append("South")
         if len(actions) == 0:
             actions.append("Stop")
+        if actions[0] is None or actions[0] == "None":
+            print("ERROR !!!")
         return actions
     
     def bestAvoidGhostAction(self, currentPosition, wallList, opponentList):
@@ -470,8 +472,8 @@ class WaStarInvader(DummyAgent):
                     candidateHomeList.append((homeWidth - 1, i))
         else:
             for i in range(1, height):
-                if (homeWidth + 2, i) not in wallList:
-                    candidateHomeList.append((homeWidth + 2, i))
+                if (homeWidth, i) not in wallList:
+                    candidateHomeList.append((homeWidth, i))
         closestHome, distance = self.closestObject(candidateHomeList, gameState)
         goHomeProblem = PositionSearchProblem(gameState, currentPosition, goal = closestHome)
         actions = wastarSearch(goHomeProblem, manhattanHeuristic)
@@ -488,6 +490,8 @@ class WaStarInvader(DummyAgent):
         print("===============================")
         print()
         print()
+        if actions[0] is None or actions[0] == "None":
+            print("ERROR !!!")
         return actions
     
     def chooseAction(self, gameState):
@@ -651,8 +655,8 @@ class WaStarInvader(DummyAgent):
             print()
             updatedGameState.data.layout.walls = original_wall_grids
             gameState = updatedGameState
-            if actions[0] is None:
-                print("None Action 0")
+            if actions[0] is None or actions[0] == "None":
+                print("ERROR !!!")
             return actions[0]
         
         
@@ -695,8 +699,8 @@ class WaStarInvader(DummyAgent):
                 actions = self.retreat(updatedGameState)
                 updatedGameState.data.layout.walls = original_wall_grids
                 gameState = updatedGameState
-                if actions[0] is None:
-                    print("None Action 1")
+                if actions[0] is None or actions[0] == "None":
+                    print("ERROR !!!")
                 return actions[0]
             
             closestFoodProblem = PositionSearchProblem(updatedGameState, updatedGameState.getAgentPosition(self.index), goal=closestFood)
@@ -720,8 +724,8 @@ class WaStarInvader(DummyAgent):
             print()
             updatedGameState.data.layout.walls = original_wall_grids
             gameState = updatedGameState
-            if actions[0] is None:
-                print("None Action 2")
+            if actions[0] is None or actions[0] == "None":
+                print("ERROR !!!")
             return actions[0]
         
         
@@ -739,8 +743,8 @@ class WaStarInvader(DummyAgent):
                 actions = self.retreat(updatedGameState)
                 updatedGameState.data.layout.walls = original_wall_grids
                 gameState = updatedGameState
-                if actions[0] is None:
-                    print("None Action 3")
+                if actions[0] is None or actions[0] == "None":
+                    print("ERROR !!!")
                 return actions[0]
             closestSafe, distance = self.closestObject(safeList, updatedGameState)
             if closestSafe is not None:
@@ -754,6 +758,8 @@ class WaStarInvader(DummyAgent):
                     # actions = self.chooseLegalRandomAction(currentPosition, wallList)
                     actions = self.bestAvoidGhostAction(currentPosition, wallList, self.getOpponentList(gameState))
                 print("Action: " + str(actions[0]))
+                if actions[0] is None or actions[0] == "None":
+                    print("ERROR !!!")
                 return actions[0]
             
             self.updateScore(updatedGameState)
@@ -778,8 +784,8 @@ class WaStarInvader(DummyAgent):
             print()
             updatedGameState.data.layout.walls = original_wall_grids
             gameState = updatedGameState
-            if actions[0] is None:
-                print("None Action 4")
+            if actions[0] is None or actions[0] == "None":
+                print("ERROR !!!")
             return actions[0]
         
         
@@ -820,8 +826,8 @@ class WaStarInvader(DummyAgent):
                 print()
                 updatedGameState.data.layout.walls = original_wall_grids
                 gameState = updatedGameState
-                if actions[0] is None:
-                    print("None Action 5")
+                if actions[0] is None or actions[0] == "None":
+                    print("ERROR !!!")
                 return actions[0]
             
             closestFood, distance = self.closestObject(goodList, updatedGameState)
@@ -848,8 +854,8 @@ class WaStarInvader(DummyAgent):
             print()
             updatedGameState.data.layout.walls = original_wall_grids
             gameState = updatedGameState
-            if actions[0] is None:
-                print("None Action 6")
+            if actions[0] is None or actions[0] == "None":
+                print("ERROR !!!")
             return actions[0]
         
         
@@ -863,8 +869,8 @@ class WaStarInvader(DummyAgent):
                         candidateHomeList.append((homeWidth - 1, i))
             else:
                 for i in range(1, height):
-                    if (homeWidth + 2, i) not in wallList:
-                        candidateHomeList.append((homeWidth + 2, i))
+                    if (homeWidth, i) not in wallList:
+                        candidateHomeList.append((homeWidth, i))
             closestHome, distance = self.closestObject(candidateHomeList, updatedGameState)
             goHomeProblem = PositionSearchProblem(updatedGameState, updatedGameState.getAgentPosition(self.index), goal=closestHome)
             actions = wastarSearch(goHomeProblem, manhattanHeuristic)
@@ -894,8 +900,8 @@ class WaStarInvader(DummyAgent):
             print()
             updatedGameState.data.layout.walls = original_wall_grids
             gameState = updatedGameState
-            if actions[0] is None:
-                print("None Action 7")
+            if actions[0] is None or actions[0] == "None":
+                print("ERROR !!!")
             return actions[0]
            
     def updateScore(self, gameState):
