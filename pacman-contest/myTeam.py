@@ -90,6 +90,24 @@ class DummyAgent(CaptureAgent):
     
     # Risky Coordinates
     riskyCoordinates = []
+
+    def __init__(self, index):
+        super().__init__(index)
+
+        # Layout related
+        self.maze_dim = None
+        self.boarder_mid = None
+        self.boardWidth = None
+        self.boardHeight = None
+        self.pathDict = None
+
+        # game state variables
+        self.initialPosition = None
+        self.currentPosition = None
+        self.opponentIndices = None
+        self.searching = None
+        self.eatenFoods = None
+        self.walls = None
     
     def isSafeCoordinate(self, coordinate, gameState):
         """
@@ -144,7 +162,7 @@ class DummyAgent(CaptureAgent):
             if number_of_escape_path > 1:
                 return True
         return False
-    
+
     def registerInitialState(self, gameState):
         """
         This method handles the initial setup of the
@@ -170,16 +188,88 @@ class DummyAgent(CaptureAgent):
         '''
         # Initialize all the safe coordinate, unsafe coordinate
         # We consider not only food, but also all the coordinates.
-        boardWidth = gameState.data.layout.width
-        boardHeight = gameState.data.layout.height
-        for x in range(boardWidth):
-            for y in range(boardHeight):
+        self.walls = gameState.getWalls()
+        # dimensions of the grid world w * h
+        self.maze_dim = (gameState.data.layout.width, gameState.data.layout.height)
+
+        self.opponentIndices = self.getOpponents(gameState)
+
+        self.boardWidth = self.maze_dim[0]
+        self.boardHeight = self.maze_dim[1]
+        for x in range(self.boardWidth):
+            for y in range(self.boardHeight):
                 if self.isSafeCoordinate((x, y), gameState):
                     self.safeCoordinates.append((x, y))
                 else:
                     self.riskyCoordinates.append((x, y))
-                    
+
+        self.pathDict = self.scanMaze()
+
         print("==========Pre-computation Done==========")
+
+    def scanMaze(self):
+        """
+        Scan through every reachable point in the given maze and calculate the shortest paths point-wise
+        :return: a dictionary --> dict[source][target] = source-<...action...>-target
+        """
+        def getReversedDirection(actions):
+            reversedActions = []
+            for action in actions[::-1]:
+                if action == Directions.NORTH: reversedActions.append(Directions.SOUTH)
+                elif action == Directions.SOUTH: reversedActions.append(Directions.NORTH)
+                elif action == Directions.WEST: reversedActions.append(Directions.EAST)
+                elif action == Directions.EAST: reversedActions.append(Directions.WEST)
+                else: reversedActions.append(Directions.STOP)
+            return reversedActions
+
+        def getDistanceOnMaze(walls):
+            valid_points = [(x, y) for x in range(self.maze_dim[0]) for y in range(self.maze_dim[1]) if
+                            (x, y) not in walls.asList()]
+            open = util.Queue()
+            path = {}
+            for p1 in valid_points:
+                if p1 not in path.keys():
+                    path[p1] = {p1: {}}
+                path[p1][p1] = []
+                init = (p1, [])
+                open.push(init)
+                closed = []
+                while len(path[p1]) < len(valid_points):
+                    currNode = open.pop()
+                    currState = currNode[0]
+                    currPath = currNode[1]
+                    if currState not in closed:
+                        closed.append(currState)
+                        successors = []
+                        x, y = currState
+                        if not walls[x][y + 1]:
+                            successors.append( ((x, y + 1), Directions.NORTH) )
+                        if not walls[x][y - 1]:
+                            successors.append( ((x, y - 1), Directions.SOUTH) )
+                        if not walls[x + 1][y]:
+                            successors.append( ((x + 1, y), Directions.EAST) )
+                        if not walls[x - 1][y]:
+                            successors.append( ((x - 1, y), Directions.WEST) )
+                        if len(successors) > 0:
+                            for each in successors:
+                                if currState not in path.keys(): path[currState] = {}
+                                if each[0] not in path.keys(): path[each[0]] = {}
+                                path[currState][each[0]] = [each[1]]
+                                path[each[0]][currState] = getReversedDirection([each[1]])
+                                temp = (each[0], currPath + [each[1]])
+                                path[p1][each[0]] = temp[1]
+                                path[each[0]][p1] = getReversedDirection(temp[1])
+                                open.push(temp)
+                                # print("path: ", path)
+                                # print("len of {}: {},  len of valid: {}".format(p1, len(path[p1]), len(valid_points)))
+                                # import time
+                                # time.sleep(3)
+            return path
+
+        return getDistanceOnMaze(self.walls)
+
+
+
     
     def chooseAction(self, gameState):
         pass
@@ -1074,22 +1164,6 @@ class WaStarInvader(DummyAgent):
     
     def getWeights(self, gameState, action):
         pass
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-
-
 
 
 #################################
@@ -1118,6 +1192,7 @@ class WaStarDefender(DummyAgent):
         self.searching = None
         self.eatenFoods = None
         self.walls = None
+
     def registerInitialState(self, gameState):
         """
         This func will be called when:
