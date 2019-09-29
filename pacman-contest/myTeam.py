@@ -63,9 +63,9 @@ class AgentFactory:
         # "Returns the agent for the provided index."
         # util.raiseNotDefined()
         if index is 'WaStarInvader':
-            return WaStarInvader()
+            return WaStarInvader(index)
         if index is 'WaStarDefender':
-            return WaStarDefender()
+            return WaStarDefender(index)
 
 class DummyAgent(CaptureAgent):
     
