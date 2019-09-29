@@ -1074,9 +1074,9 @@ class WaStarDefender(DummyAgent):
             pos[1] - self.currentPosition[1], 2))[0]
         d = self.getMazeDistance(self.initialPosition, self.currentPosition)
         if d < gameState.getAgentState(self.index).scaredTimer - 2:
-            self.suicide(gameState, enemyPosition)
+            return self.suicide(gameState, enemyPosition)
         else:
-            self.flee(gameState, enemyPosition)
+            return self.flee(gameState, enemyPosition)
 
     def suicide(self, gameState, enemyPosition):
         goHomeProblem = PositionSearchProblem(gameState, self.currentPosition, goal=enemyPosition)
