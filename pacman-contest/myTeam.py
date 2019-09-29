@@ -12,7 +12,7 @@
 # Pieter Abbeel (pabbeel@cs.berkeley.edu).
 import sys
 
-from captureAgents import CaptureAgent
+from captureAgents import CaptureAgent, AgentFactory
 import random, time, util
 from game import Directions
 import game
