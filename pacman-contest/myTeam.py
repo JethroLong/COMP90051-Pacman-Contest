@@ -279,8 +279,7 @@ class DummyAgent(CaptureAgent):
         if (x, y + 1) not in opponentList and (x, y - 1) not in opponentList and (x + 1, y) not in opponentList and (x - 1, y) not in opponentList:
             legalAction.append("Stop")
         return legalAction
-        
-    
+
     def closestObject(self, listOfObjects, gameState):
         currentPosition = gameState.getAgentPosition(self.index)
         closestObj = None
@@ -843,8 +842,7 @@ class WaStarInvader(DummyAgent):
             if actions[0] is None or actions[0] == "None":
                 print("ERROR !!!")
             return actions[0]
-        
-        
+
         elif self.mode == "invader hunting mode" and len(opponentList) != 0:
             print("Opponent List: " + str(opponentList))
             safeList = []
@@ -1074,22 +1072,6 @@ class WaStarInvader(DummyAgent):
     
     def getWeights(self, gameState, action):
         pass
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-
-
 
 
 #################################
@@ -1340,31 +1322,6 @@ def manhattanHeuristic(position, problem, info={}):
     xy1 = position
     xy2 = problem.goal
     return abs(xy1[0] - xy2[0]) + abs(xy1[1] - xy2[1])
-
-def heuristic_switcher(state, gameState):
-    pass
-
-def nullHeuristic():
-    return 0
-
-def foodHeuristic():
-    pass
-
-def capsuleHeuristic():
-    pass
-
-def manhattanDistance(point1, point2):
-    return abs(point1[0]-point2[0]) + abs(point1[1]-point2[1])
-
-def findNearestFood(state, gameState):
-    pass
-
-def findFurthestFood(state, gameState):
-    pass
-
-def findNearestGhost(state, gameState):
-    pass
-
 
 ###################################
 #      Problem Gallery
