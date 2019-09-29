@@ -58,20 +58,33 @@ class AgentFactory:
 
     def __init__(self, isRed, **args):
         self.isRed = isRed
+        self.agent = True
 
     def getAgent(self, index):
+        '''
         # "Returns the agent for the provided index."
         # util.raiseNotDefined()
         if self.isRed:
-            if index == "1":
+            # if index == "1":
+            if index == 1:
                 return WaStarInvader(index)
-            elif index == "3":
+            # elif index == "3":
+            elif index == 3:
                 return WaStarDefender(index)
         else:
-            if index == "0":
+            # if index == "0":
+            if index == 0:
                 return WaStarInvader(index)
-            elif index == "2":
+            # elif index == "2":
+            elif index == 2:
                 return WaStarDefender(index)
+        '''
+        if self.agent:
+            self.agent = not self.agent
+            return WaStarInvader(index)
+        else:
+            self.agent = not self.agent
+            return WaStarDefender(index)
 
 class DummyAgent(CaptureAgent):
     
