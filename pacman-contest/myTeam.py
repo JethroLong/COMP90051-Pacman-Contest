@@ -12,7 +12,7 @@
 # Pieter Abbeel (pabbeel@cs.berkeley.edu).
 import sys
 
-from captureAgents import CaptureAgent, AgentFactory
+from captureAgents import CaptureAgent
 import random, time, util
 from game import Directions
 import game
@@ -49,6 +49,23 @@ def createTeam(firstIndex, secondIndex, isRed,
 ##########
 # Agents #
 ##########
+
+
+# Note: the following class is not used, but is kept for backwards
+# compatibility with team submissions that try to import it.
+class AgentFactory:
+    "Generates agents for a side"
+
+    def __init__(self, isRed, **args):
+        self.isRed = isRed
+
+    def getAgent(self, index):
+        # "Returns the agent for the provided index."
+        # util.raiseNotDefined()
+        if index is 'WaStarInvader':
+            return WaStarInvader()
+        if index is 'WaStarDefender':
+            return WaStarDefender()
 
 class DummyAgent(CaptureAgent):
     
