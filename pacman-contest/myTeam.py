@@ -661,8 +661,11 @@ class WaStarInvader(DummyAgent):
                 newStartingPoint.append((x, y - 1))
             safeLeadingDirection = []
             for startingPoint in newStartingPoint:
-                dfsProblem = PositionSearchProblem(gameState, startingPoint)
-                path = self.depthFirstSearchSafeDetector(dfsProblem, currentPosition, self.getWallList(gameState), self.getOpponentList(gameState))
+                if startingPoint in self.safeCoordinates:
+                    path = ["placeholder"]
+                else:
+                    dfsProblem = PositionSearchProblem(gameState, startingPoint)
+                    path = self.depthFirstSearchSafeDetector(dfsProblem, currentPosition, self.getWallList(gameState), self.getOpponentList(gameState))
                 if len(path) != 0:
                     if startingPoint == (x + 1, y):
                         safeLeadingDirection.append("East")
@@ -881,6 +884,28 @@ class WaStarInvader(DummyAgent):
                             if (x, y - 1) not in wallList:
                                 wallList.append((x, y - 1))
                                 wall_grids[x][y - 1] = True
+                                
+        boardWidth, boardHeight = self.getWidthandHeight(gameState)
+        if self.red and currentPosition[0] == int(boardWidth / 2) - 1:
+            if (int(boardWidth / 2), currentPosition[1]) in opponentList:
+                for key in opponentDict:
+                    if (int(boardWidth / 2), currentPosition[1]) == key[1] and opponentDict[key] <= countAsScaredThreshold:
+                        wallList.append((int(boardWidth / 2), currentPosition[1]))
+                        wall_grids[int(boardWidth / 2)][currentPosition[1]] = True
+        if self.red and currentPosition[0] == int(boardWidth / 2):
+            if (int(boardWidth / 2) - 1, currentPosition[1]) in opponentPacmanList:
+                wallList.append((int(boardWidth / 2) - 1, currentPosition[1]))
+                wall_grids[(int(boardWidth / 2) - 1)][currentPosition[1]] = True
+        if not self.red and currentPosition[0] == int(boardWidth / 2):
+            if (int(boardWidth / 2) - 1, currentPosition[1]) in opponentList:
+                for key in opponentDict:
+                    if (int(boardWidth / 2) - 1, currentPosition[1]) == key[1] and opponentDict[key] <= countAsScaredThreshold:
+                        wallList.append((int(boardWidth / 2) - 1, currentPosition[1]))
+                        wall_grids[(int(boardWidth / 2) - 1)][currentPosition[1]] = True
+        if not self.red and currentPosition[0] == int(boardWidth / 2) - 1:
+            if (int(boardWidth / 2), currentPosition[1]) in opponentPacmanList:
+                wallList.append((int(boardWidth / 2), currentPosition[1]))
+                wall_grids[int(boardWidth / 2)][currentPosition[1]] = True
         
         myScaredTime = 0 # used if I am a ghost at home territory.
         if not updatedGameState.getAgentState(self.index).isPacman:
@@ -941,9 +966,10 @@ class WaStarInvader(DummyAgent):
             huntingPacmanScoreThreshold = 3
             score = self.getScore(updatedGameState)
             if score >= huntingPacmanScoreThreshold and myScaredTime == 0:
-                if self.debug_message: print("Optimistic Score & Nearby Pacman Present, Hunt It! ")
                 if self.debug_message: print("Score: " + str(score))
                 if self.debug_message: print("Nearby Pacman List: " + str(opponentPacmanList))
+                if len(opponentPacmanList) != 0:
+                    if self.debug_message: print("Optimistic Score & Nearby Pacman Present, Hunt It! ")
                 for element in opponentPacmanList:
                     if element not in foodList:
                         foodList.append(element)
@@ -957,6 +983,17 @@ class WaStarInvader(DummyAgent):
             if self.debug_message: print("Goal: " + str(closestFood))
             if abs(closestFood[0] - currentPosition[0]) > 10:
                 actions = self.pathDict[currentPosition][closestFood]
+                # TODO ====== UNDER CONSTRUCTION
+                # WARNING: This may not necessarily work !
+                allowedActions = self.getLegalActionOfPosition(currentPosition, updatedGameState)
+                # TODO
+                if actions[0] == "Stop":
+                    actions[0] = actions[1]
+                if actions[0] not in allowedActions:
+                    selectedAction = random.choice(allowedActions)
+                    actions[0] = selectedAction
+                # TODO ====== UNDER CONSTRUCTION END
+                # TODO NOTE: When using the pre-computed path, if the first action is in the new wallList, random choose another valid action.
             else:
                 closestFoodProblem = PositionSearchProblem(updatedGameState, updatedGameState.getAgentPosition(self.index), goal=closestFood)
                 actions = wastarSearch(closestFoodProblem, manhattanHeuristic)
@@ -1630,6 +1667,7 @@ class PositionSearchProblem(SearchProblem):
     def isGoalState(self, state):
         isGoal = state == self.goal
         
+        '''
         if str(self.goal).startswith("HOME"):
             param1, param2 = str(self.goal).split(" ")[1], str(self.goal).split(" ")[2]
             if param2 == "<":
@@ -1642,7 +1680,7 @@ class PositionSearchProblem(SearchProblem):
                     return True
                 else:
                     return False
-
+        '''
         '''
         # For display purposes only
         if isGoal and self.visualize:
