@@ -23,8 +23,6 @@ import re, os
 #################
 # Team creation #
 #################
-from graphicsDisplay import InfoPane
-
 
 def createTeam(firstIndex, secondIndex, isRed,
                first = 'WaStarInvader', second = 'WaStarDefender'):
@@ -280,7 +278,7 @@ class DummyAgent(CaptureAgent):
                                     1. Reduced search space
                                     2. Every one-step gives at most four
                                      > Two for adjacency
-                                     > Two for init and one another 
+                                     > Two for init and one another
                                 '''
 
                                 path[currState][each[0]] = [each[1]]
@@ -1549,6 +1547,7 @@ class PositionSearchProblem(SearchProblem):
                 else:
                     return False
 
+        '''
         # For display purposes only
         if isGoal and self.visualize:
             self._visitedlist.append(state)
@@ -1556,6 +1555,7 @@ class PositionSearchProblem(SearchProblem):
             if '_display' in dir(__main__):
                 if 'drawExpandedCells' in dir(__main__._display): #@UndefinedVariable
                     __main__._display.drawExpandedCells(self._visitedlist) #@UndefinedVariable
+        '''
 
         return isGoal
 
