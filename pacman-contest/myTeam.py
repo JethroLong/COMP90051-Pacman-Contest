@@ -101,6 +101,9 @@ class DummyAgent(CaptureAgent):
     
     # Risky Coordinates
     riskyCoordinates = []
+    
+    # Before submitting the code, turn this to False to hide debug messages
+    debug_message = True # Turn to False before submission # TODO
 
     def __init__(self, index):
         super().__init__(index)
@@ -222,7 +225,7 @@ class DummyAgent(CaptureAgent):
             print("path: ", self.pathDict[(int(x1), int(y1))][(int(x2), int(y2))])
         '''
         
-        print("==========Pre-computation Done==========")
+        if self.debug_message: print("==========Pre-computation Done==========")
 
     def scanMaze(self):
         """
@@ -332,13 +335,15 @@ class DummyAgent(CaptureAgent):
         height = gameState.data.layout.height
         return width, height
     
+    # This function is for testing only, not used currently.
     def getHome(self, gameState):
         width = gameState.data.layout.width
         if self.red:
             return int(width / 2), "<"
         else:
             return int(width / 2), ">="
-        
+    
+    # This function is for testing only, not used currently.
     def getFoodXCoordinateClosestToBorder(self, gameState):
         foodList = self.getFood(gameState).asList()
         if self.red:
@@ -375,11 +380,13 @@ class DummyAgent(CaptureAgent):
     
     def areGhostsAround(self, gameState, testCoordinate, inclusiveRangeThreshold):
         surroundingOpponentList = []
+        considerGhostAsSurroundingThreshold = sys.maxsize # can be sys.maxsize # TO CHECK
         for opponentIndex in self.getOpponents(gameState):
             opponentPosition = gameState.getAgentPosition(opponentIndex)
             if opponentPosition is not None:
                 if testCoordinate[0] - inclusiveRangeThreshold <= opponentPosition[0] <= testCoordinate[0] + inclusiveRangeThreshold and testCoordinate[1] - inclusiveRangeThreshold <= opponentPosition[1] <= testCoordinate[1] + inclusiveRangeThreshold:
-                    surroundingOpponentList.append(opponentPosition)
+                    if self.getMazeDistance(testCoordinate, opponentPosition) <= considerGhostAsSurroundingThreshold:
+                        surroundingOpponentList.append(opponentPosition)
         return surroundingOpponentList
     
     def getFoodList(self, gameState):
@@ -591,7 +598,9 @@ class WaStarInvader(DummyAgent):
         if len(actions) == 0:
             actions.append("Stop")
         else:
-            actions[0] = random.choice(actions)
+            #actions[0] = random.choice(actions)
+            selectedAction = random.choice(actions)
+            actions[0] = selectedAction
         return actions
     
     def bestAvoidGhostAction(self, gameState, currentPosition, wallList, opponentList, capsuleList):
@@ -642,6 +651,7 @@ class WaStarInvader(DummyAgent):
                 return [self.chooseLegalRandomAction(currentPosition, wallList)[0]]
             return [wisestAction]
         else:
+            if self.debug_message: print("No Surrounding Ghosts, this function shouldnt be used in this case. ")
             return [self.chooseLegalRandomAction(currentPosition, wallList)[0]]
     
     def isSafeCoordinate(self, coordinate, gameState):
@@ -717,21 +727,21 @@ class WaStarInvader(DummyAgent):
                 if (homeWidth, i) not in wallList:
                     candidateHomeList.append((homeWidth, i))
         closestHome, distance = self.closestObject(candidateHomeList, gameState)
-        print("Goal: " + str(closestHome))
+        if self.debug_message: print("Goal: " + str(closestHome))
         goHomeProblem = PositionSearchProblem(gameState, currentPosition, goal = closestHome)
         actions = wastarSearch(goHomeProblem, manhattanHeuristic)
         self.updateScore(gameState)
-        print("Goal Type: Closest Home")
+        if self.debug_message: print("Goal Type: Closest Home")
         if len(actions) == 0:
             # actions.append("Stop")
             # Don't Stop, stop is the most stupidest move
-            print("Empty Action List, Random Select Legal Actions")
+            if self.debug_message: print("Empty Action List, Random Select Legal Actions")
             # actions = self.chooseLegalRandomAction(currentPosition, wallList)
             actions = self.bestAvoidGhostAction(gameState, currentPosition, wallList, self.getOpponentList(gameState), self.getCapsuleList(gameState))
-        print("Action: " + actions[0])
-        print("===============================")
-        print()
-        print()
+        if self.debug_message: print("Action: " + actions[0])
+        if self.debug_message: print("===============================")
+        if self.debug_message: print()
+        if self.debug_message: print()
         return actions
     
     def chooseAction(self, gameState):
@@ -755,18 +765,18 @@ class WaStarInvader(DummyAgent):
         
         self.updateMode(gameState, scaredTime, closestOpponentDistance)
         
-        print("============INVADER============")
-        print("Mode: " + self.mode)
-        print("Position: " + str(gameState.getAgentPosition(self.index)))
+        if self.debug_message: print("============INVADER============")
+        if self.debug_message: print("Mode: " + self.mode)
+        if self.debug_message: print("Position: " + str(gameState.getAgentPosition(self.index)))
         
         foodList = self.getFood(gameState).asList()
         capsuleList = self.getCapsules(gameState)
         opponentPacmanList = self.getOpponentPacmanList(gameState)
-        print("Capsule List: " + str(capsuleList))
-        print("Opponent List: " + str(opponentList))
-        print("Opponent Pacman List: " + str(opponentPacmanList))
+        if self.debug_message: print("Capsule List: " + str(capsuleList))
+        if self.debug_message: print("Opponent List: " + str(opponentList))
+        if self.debug_message: print("Opponent Pacman List: " + str(opponentPacmanList))
         if closestOpponent is not None:
-            print("Closest Opponent Ghost: " + str(closestOpponent) + ": " + str(closestOpponentDistance))
+            if self.debug_message: print("Closest Opponent Ghost: " + str(closestOpponent) + ": " + str(closestOpponentDistance))
         
         wallList = self.getWallList(gameState)
         original_wall_grids = gameState.data.layout.walls
@@ -777,13 +787,13 @@ class WaStarInvader(DummyAgent):
         # DETECT OPPONENT AROUND ME
         if len(opponentList) != 0 and numberOfScaredGhost != len(list(opponentDict.keys())):
             # There are ghosts around me, and at least one of them is not scared.
-            print("Number of Opponent Around Me: " + str(len(opponentList)))
-            print("Number of Scared Opponent Around Me: " + str(numberOfScaredGhost))
+            if self.debug_message: print("Number of Opponent Around Me: " + str(len(opponentList)))
+            if self.debug_message: print("Number of Scared Opponent Around Me: " + str(numberOfScaredGhost))
             for candidateOpponent in opponentList:
                 for key in opponentDict:
                     if candidateOpponent == key[1] and opponentDict[key] <= countAsScaredThreshold:
                         distance = self.getMazeDistance(candidateOpponent, currentPosition)
-                        print("Not Scared Opponent " + str(candidateOpponent) + " Distance: " + str(distance))
+                        if self.debug_message: print("Not Scared Opponent " + str(candidateOpponent) + " Distance: " + str(distance))
                         if candidateOpponent not in wallList:
                             wallList.append(candidateOpponent)
                             wall_grids[candidateOpponent[0]][candidateOpponent[1]] = True
@@ -810,10 +820,10 @@ class WaStarInvader(DummyAgent):
             myScaredTime = updatedGameState.data.agentStates[self.index].scaredTimer
         
         if len(opponentPacmanList) != 0 and self.mode == "invader home mode" and myScaredTime > 0:
-            print("My Scared Timer: " + str(myScaredTime))
+            if self.debug_message: print("My Scared Timer: " + str(myScaredTime))
             for candidateOpponentPacman in opponentPacmanList:
                 distance = self.getMazeDistance(candidateOpponentPacman, currentPosition)
-                print("Opponent Pacman " + str(candidateOpponentPacman) + "Distance: " + str(distance))
+                if self.debug_message: print("Opponent Pacman " + str(candidateOpponentPacman) + " Distance: " + str(distance))
                 if candidateOpponentPacman not in wallList:
                     wallList.append(candidateOpponentPacman)
                     wall_grids[candidateOpponentPacman[0]][candidateOpponentPacman[1]] = True
@@ -864,20 +874,20 @@ class WaStarInvader(DummyAgent):
             huntingPacmanScoreThreshold = 3
             score = self.getScore(updatedGameState)
             if score >= huntingPacmanScoreThreshold and myScaredTime == 0:
-                print("Optimistic Score & Nearby Pacman Present, Hunt It! ")
-                print("Score: " + str(score))
-                print("Nearby Pacman List: " + str(opponentPacmanList))
+                if self.debug_message: print("Optimistic Score & Nearby Pacman Present, Hunt It! ")
+                if self.debug_message: print("Score: " + str(score))
+                if self.debug_message: print("Nearby Pacman List: " + str(opponentPacmanList))
                 for element in opponentPacmanList:
                     if element not in foodList:
                         foodList.append(element)
                         
             if len(foodList) == 0:
                 actions = self.chooseLegalRandomAction(currentPosition, wallList)
-                print("Empty food list, randomly choose legal action")
+                if self.debug_message: print("Empty food list, randomly choose legal action")
                 return actions[0]
             
             closestFood, distance = self.closestObject(foodList, updatedGameState)
-            print("Goal: " + str(closestFood))
+            if self.debug_message: print("Goal: " + str(closestFood))
             if abs(closestFood[0] - currentPosition[0]) > 10:
                 actions = self.pathDict[currentPosition][closestFood]
             else:
@@ -885,22 +895,22 @@ class WaStarInvader(DummyAgent):
                 actions = wastarSearch(closestFoodProblem, manhattanHeuristic)
             self.updateScore(updatedGameState)
             if closestFood in foodList:
-                print("Goal Type: Food")
+                if self.debug_message: print("Goal Type: Food")
             elif closestFood in capsuleList:
-                print("Goal Type: Capsule")
+                if self.debug_message: print("Goal Type: Capsule")
             else:
-                print("Goal Type: Nearby Pacman in Home Territory")
+                if self.debug_message: print("Goal Type: Nearby Pacman in Home Territory")
             if len(actions) == 0:
-                print("Food list not empty, however, no action available, randomly choose legal action")
+                if self.debug_message: print("Food list not empty, however, no action available, randomly choose legal action")
                 actions = self.chooseLegalRandomAction(currentPosition, wallList)
-            print("Action: " + actions[0])
-            print("===============================")
-            print()
-            print()
+            if self.debug_message: print("Action: " + actions[0])
+            if self.debug_message: print("===============================")
+            if self.debug_message: print()
+            if self.debug_message: print()
             updatedGameState.data.layout.walls = original_wall_grids
             gameState = updatedGameState
             if actions[0] is None or actions[0] == "None":
-                print("ERROR !!!")
+                if self.debug_message: print("ERROR !!!")
             return actions[0]
         
         
@@ -948,100 +958,107 @@ class WaStarInvader(DummyAgent):
                             closestDistance = tempDistance
                             closestFood = element
             if len(goodList) == 0 or closestFood is None:
-                print("Mode Changes: invader retreat mode")
+                if self.debug_message: print("Mode Changes: invader retreat mode")
                 actions = self.retreat(updatedGameState)
                 updatedGameState.data.layout.walls = original_wall_grids
                 gameState = updatedGameState
                 if actions[0] is None or actions[0] == "None":
-                    print("ERROR !!!")
+                    if self.debug_message: print("ERROR !!!")
                 return actions[0]
             
             closestFoodProblem = PositionSearchProblem(updatedGameState, updatedGameState.getAgentPosition(self.index), goal=closestFood)
-            print("Goal: " + str(closestFood))
+            if self.debug_message: print("Goal: " + str(closestFood))
             actions = wastarSearch(closestFoodProblem, manhattanHeuristic)
             self.updateScore(updatedGameState)
             if closestFood in foodList:
-                print("Goal Type: Food")
+                if self.debug_message: print("Goal Type: Food")
             elif closestFood in capsuleList:
-                print("Goal Type: Capsule")
+                if self.debug_message: print("Goal Type: Capsule")
             else:
-                print("Goal Type: Opponent Pacman At Home")
-                print("Opponent Pacman List: " + str(opponentPacmanList))
-                print("Score: " + str(score))
+                if self.debug_message: print("Goal Type: Opponent Pacman At Home")
+                if self.debug_message: print("Opponent Pacman List: " + str(opponentPacmanList))
+                if self.debug_message: print("Score: " + str(score))
             if len(actions) == 0:
-                print("Food list not empty, however, no action available")
+                if self.debug_message: print("Food list not empty, however, no action available")
                 actions = self.chooseLegalRandomAction(currentPosition, wallList)
-            print("Action: " + actions[0])
-            print("===============================")
-            print()
-            print()
+            if self.debug_message: print("Action: " + actions[0])
+            if self.debug_message: print("===============================")
+            if self.debug_message: print()
+            if self.debug_message: print()
             updatedGameState.data.layout.walls = original_wall_grids
             gameState = updatedGameState
             if actions[0] is None or actions[0] == "None":
-                print("ERROR !!!")
+                if self.debug_message: print("ERROR !!!")
             return actions[0]
 
         elif self.mode == "invader hunting mode" and len(opponentList) != 0:
-            print("Opponent List: " + str(opponentList))
+            if self.debug_message: print("Opponent List: " + str(opponentList))
             safeList = []
-            for foodCoordinate in foodList:
-                # if self.isSafeCoordinate(foodCoordinate, updatedGameState):
-                if len(self.areGhostsAround(updatedGameState, foodCoordinate, 7)) != 0:
-                    if self.isSafeCoordinate(foodCoordinate, updatedGameState):
+            capsulePrioritized = False
+            if len(capsuleList) != 0:
+                capsulePrioritizedDistanceThreshold = 3
+                for capsule in capsuleList:
+                    if self.getMazeDistance(currentPosition, capsule) <= capsulePrioritizedDistanceThreshold:
+                        capsulePrioritized = True
+            if not capsulePrioritized:
+                for foodCoordinate in foodList:
+                    # if self.isSafeCoordinate(foodCoordinate, updatedGameState):
+                    if len(self.areGhostsAround(updatedGameState, foodCoordinate, 7)) != 0:
+                        if self.isSafeCoordinate(foodCoordinate, updatedGameState):
+                            safeList.append(foodCoordinate)
+                    elif foodCoordinate in self.safeCoordinates:
                         safeList.append(foodCoordinate)
-                elif foodCoordinate in self.safeCoordinates:
-                    safeList.append(foodCoordinate)
             for capsuleCoordinate in capsuleList:
                 safeList.append(capsuleCoordinate)
-            print("Number of Safe Goods: " + str(len(safeList)))
+            if self.debug_message: print("Number of Safe Goods: " + str(len(safeList)))
             if len(safeList) == 0:
-                print("Mode Change: invader retreat mode")
+                if self.debug_message: print("Mode Change: invader retreat mode")
                 actions = self.retreat(updatedGameState)
                 updatedGameState.data.layout.walls = original_wall_grids
                 gameState = updatedGameState
                 if actions[0] is None or actions[0] == "None":
-                    print("ERROR !!!")
+                    if self.debug_message: print("ERROR !!!")
                 return actions[0]
             closestSafe, distance = self.closestObject(safeList, updatedGameState)
-            print("Goal: " + str(closestSafe))
+            if self.debug_message: print("Goal: " + str(closestSafe))
             if closestSafe is not None:
                 closestFoodProblem = PositionSearchProblem(updatedGameState, updatedGameState.getAgentPosition(self.index), goal=closestSafe)
                 actions = wastarSearch(closestFoodProblem, manhattanHeuristic)
             else:
-                print("Mode Change: invader retreat mode")
+                if self.debug_message: print("Mode Change: invader retreat mode")
                 actions = self.retreat(updatedGameState)
-                print("Go Home")
+                if self.debug_message: print("Go Home")
                 if len(actions) == 0:
                     # actions = self.chooseLegalRandomAction(currentPosition, wallList)
                     actions = self.bestAvoidGhostAction(gameState, currentPosition, wallList, self.getOpponentList(gameState), self.getCapsuleList(gameState))
-                print("Action: " + str(actions[0]))
+                if self.debug_message: print("Action: " + str(actions[0]))
                 if actions[0] is None or actions[0] == "None":
-                    print("ERROR !!!")
+                    if self.debug_message: print("ERROR !!!")
                 return actions[0]
             
             self.updateScore(updatedGameState)
             if closestSafe in foodList:
-                print("Goal Type: Safe Food")
+                if self.debug_message: print("Goal Type: Safe Food")
             elif closestSafe in capsuleList:
-                print("Goal Type: Safe Capsule")
+                if self.debug_message: print("Goal Type: Safe Capsule")
             else:
-                print("Goal Type: Closest Home")
+                if self.debug_message: print("Goal Type: Closest Home")
             if len(actions) == 0:
                 # actions.append("Stop")
-                print("Go Home")
+                if self.debug_message: print("Go Home")
                 actions = self.retreat(updatedGameState)
                 if len(actions) == 0:
-                    print("Empty Action List, Random Select Legal Actions")
+                    if self.debug_message: print("Empty Action List, Random Select Legal Actions")
                     # actions = self.chooseLegalRandomAction(currentPosition, wallList)
                     actions = self.bestAvoidGhostAction(gameState, currentPosition, wallList, self.getOpponentList(gameState), self.getCapsuleList(gameState))
-            print("Action: " + actions[0])
-            print("===============================")
-            print()
-            print()
+            if self.debug_message: print("Action: " + actions[0])
+            if self.debug_message: print("===============================")
+            if self.debug_message: print()
+            if self.debug_message: print()
             updatedGameState.data.layout.walls = original_wall_grids
             gameState = updatedGameState
             if actions[0] is None or actions[0] == "None":
-                print("ERROR !!!")
+                if self.debug_message: print("ERROR !!!")
             return actions[0]
         
         
@@ -1067,51 +1084,51 @@ class WaStarInvader(DummyAgent):
             #         if element not in foodList:
             #             foodList.append(element)
             if len(goodList) == 0:
-                print("Trigger invader retreat mode")
+                if self.debug_message: print("Trigger invader retreat mode")
                 actions = self.retreat(updatedGameState)
                 self.updateScore(updatedGameState)
-                print("Goal Type: Closest Home")
+                if self.debug_message: print("Goal Type: Closest Home")
                 if len(actions) == 0:
                     # actions.append("Stop")
-                    print("Empty Action List, Random Select Legal Actions")
+                    if self.debug_message: print("Empty Action List, Random Select Legal Actions")
                     # actions = self.chooseLegalRandomAction(currentPosition, wallList)
                     actions = self.bestAvoidGhostAction(gameState, currentPosition, wallList, self.getOpponentList(gameState), self.getCapsuleList(gameState))
-                print("Action: " + actions[0])
-                print("===============================")
-                print()
-                print()
+                if self.debug_message: print("Action: " + actions[0])
+                if self.debug_message: print("===============================")
+                if self.debug_message: print()
+                if self.debug_message: print()
                 updatedGameState.data.layout.walls = original_wall_grids
                 gameState = updatedGameState
                 if actions[0] is None or actions[0] == "None":
-                    print("ERROR !!!")
+                    if self.debug_message: print("ERROR !!!")
                 return actions[0]
             
             closestFood, distance = self.closestObject(goodList, updatedGameState)
-            print("Goal: " + str(closestFood))
+            if self.debug_message: print("Goal: " + str(closestFood))
             closestFoodProblem = PositionSearchProblem(updatedGameState, updatedGameState.getAgentPosition(self.index), goal=closestFood)
             actions = wastarSearch(closestFoodProblem, manhattanHeuristic)
             self.updateScore(updatedGameState)
             if closestFood in capsuleList:
-                print("Goal Type: Capsule")
+                if self.debug_message: print("Goal Type: Capsule")
             elif closestFood in opponentList:
-                print("Goal Type: Opponent Ghost")
+                if self.debug_message: print("Goal Type: Opponent Ghost")
             else:
-                print("Goal Type: Food")
+                if self.debug_message: print("Goal Type: Food")
             if len(actions) == 0:
                 actions = self.retreat(updatedGameState)
                 if len(actions) == 0:
                     # actions = self.chooseLegalRandomAction(currentPosition, wallList)
                     actions = self.bestAvoidGhostAction(gameState, currentPosition, wallList, self.getOpponentList(gameState), self.getCapsuleList(gameState))
-            print("Action: " + actions[0])
-            print("Capsule Eaten: " + str(updatedGameState.data._capsuleEaten))
-            print("Scared Timer: " + str(scaredTime))
-            print("===============================")
-            print()
-            print()
+            if self.debug_message: print("Action: " + actions[0])
+            if self.debug_message: print("Capsule Eaten: " + str(updatedGameState.data._capsuleEaten))
+            if self.debug_message: print("Scared Timer: " + str(scaredTime))
+            if self.debug_message: print("===============================")
+            if self.debug_message: print()
+            if self.debug_message: print()
             updatedGameState.data.layout.walls = original_wall_grids
             gameState = updatedGameState
             if actions[0] is None or actions[0] == "None":
-                print("ERROR !!!")
+                if self.debug_message: print("ERROR !!!")
             return actions[0]
         
         
@@ -1128,14 +1145,14 @@ class WaStarInvader(DummyAgent):
                     if (homeWidth, i) not in wallList:
                         candidateHomeList.append((homeWidth, i))
             closestHome, distance = self.closestObject(candidateHomeList, updatedGameState)
-            print("Goal: " + str(closestHome))
+            if self.debug_message: print("Goal: " + str(closestHome))
             goHomeProblem = PositionSearchProblem(updatedGameState, updatedGameState.getAgentPosition(self.index), goal=closestHome)
             actions = wastarSearch(goHomeProblem, manhattanHeuristic)
             self.updateScore(updatedGameState)
-            print("Goal Type: Closest Home")
+            if self.debug_message: print("Goal Type: Closest Home")
             if len(actions) == 0:
                 # actions.append("Stop")
-                print("Empty Action List, Random Select Legal Actions")
+                if self.debug_message: print("Empty Action List, Random Select Legal Actions")
                 actions = []
                 x, y = currentPosition[0], currentPosition[1]
                 if (x - 1, y) not in wallList:
@@ -1150,14 +1167,14 @@ class WaStarInvader(DummyAgent):
                     actions[0] = random.choice(actions)
                 else:
                     actions.append("Stop")
-            print("Action: " + actions[0])
-            print("===============================")
-            print()
-            print()
+            if self.debug_message: print("Action: " + actions[0])
+            if self.debug_message: print("===============================")
+            if self.debug_message: print()
+            if self.debug_message: print()
             updatedGameState.data.layout.walls = original_wall_grids
             gameState = updatedGameState
             if actions[0] is None or actions[0] == "None":
-                print("ERROR !!!")
+                if self.debug_message: print("ERROR !!!")
             return actions[0]
            
     def updateScore(self, gameState):
