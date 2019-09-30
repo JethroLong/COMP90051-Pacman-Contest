@@ -216,6 +216,12 @@ class DummyAgent(CaptureAgent):
         
         self.pathDict = self.scanMaze()
         
+        '''
+        while True:
+            x1, y1, x2, y2 = input("type in source point and target point: ").split()
+            print("path: ", self.pathDict[(int(x1), int(y1))][(int(x2), int(y2))])
+        '''
+        
         print("==========Pre-computation Done==========")
 
     def scanMaze(self):
@@ -223,22 +229,16 @@ class DummyAgent(CaptureAgent):
         Scan through every reachable point in the given maze and calculate the shortest paths point-wise
         :return: a dictionary --> dict[source][target] = source-<...action...>-target
         """
-    
         def getReversedDirection(actions):
             reversedActions = []
             for action in actions[::-1]:
-                if action == Directions.NORTH:
-                    reversedActions.append(Directions.SOUTH)
-                elif action == Directions.SOUTH:
-                    reversedActions.append(Directions.NORTH)
-                elif action == Directions.WEST:
-                    reversedActions.append(Directions.EAST)
-                elif action == Directions.EAST:
-                    reversedActions.append(Directions.WEST)
-                else:
-                    reversedActions.append(Directions.STOP)
+                if action == Directions.NORTH: reversedActions.append(Directions.SOUTH)
+                elif action == Directions.SOUTH: reversedActions.append(Directions.NORTH)
+                elif action == Directions.WEST: reversedActions.append(Directions.EAST)
+                elif action == Directions.EAST: reversedActions.append(Directions.WEST)
+                else: reversedActions.append(Directions.STOP)
             return reversedActions
-    
+
         def getDistanceOnMaze(walls):
             valid_points = [(x, y) for x in range(self.maze_dim[0]) for y in range(self.maze_dim[1]) if
                             (x, y) not in walls.asList()]
@@ -251,22 +251,21 @@ class DummyAgent(CaptureAgent):
                 init = (p1, [])
                 open.push(init)
                 closed = []
-                while len(path[p1]) < len(valid_points):
+                while len(closed) < len(valid_points):
                     currNode = open.pop()
                     currState = currNode[0]
                     currPath = currNode[1]
                     if currState not in closed:
-                        closed.append(currState)
                         successors = []
                         x, y = currState
                         if not walls[x][y + 1]:
-                            successors.append(((x, y + 1), Directions.NORTH))
+                            successors.append( ((x, y + 1), Directions.NORTH) )
                         if not walls[x][y - 1]:
-                            successors.append(((x, y - 1), Directions.SOUTH))
+                            successors.append( ((x, y - 1), Directions.SOUTH) )
                         if not walls[x + 1][y]:
-                            successors.append(((x + 1, y), Directions.EAST))
+                            successors.append( ((x + 1, y), Directions.EAST) )
                         if not walls[x - 1][y]:
-                            successors.append(((x - 1, y), Directions.WEST))
+                            successors.append( ((x - 1, y), Directions.WEST) )
                         if len(successors) > 0:
                             for each in successors:
                                 if currState not in path.keys(): path[currState] = {}
@@ -280,20 +279,33 @@ class DummyAgent(CaptureAgent):
                                      > Two for adjacency
                                      > Two for init and one another
                                 '''
+                                if each[0] not in closed:
+                                    path[currState][each[0]] = [each[1]]
+                                    path[each[0]][currState] = getReversedDirection([each[1]])
+                                    assert len(path[currState][each[0]]) == len(path[each[0]][currState])
+                                    temp = (each[0], currPath + [each[1]])
+                                    path[p1][each[0]] = temp[1]
+                                    path[each[0]][p1] = getReversedDirection(temp[1])
+                                    assert len(path[p1][each[0]]) == len(path[each[0]][p1])
+                                    open.push(temp)
 
-                                path[currState][each[0]] = [each[1]]
-                                path[each[0]][currState] = getReversedDirection([each[1]])
-                                temp = (each[0], currPath + [each[1]])
-                                path[p1][each[0]] = temp[1]
-                                path[each[0]][p1] = getReversedDirection(temp[1])
-                                open.push(temp)
                                 # print("path: ", path)
-                                # print("len of {}: {},  len of valid: {}".format(p1, len(path[p1]), len(valid_points)))
+                        # print("len of {}: {},  len of valid: {}, open size: {}".format(p1, len(path[p1]), len(valid_points), len(open.list)))
+                        closed.append(currState)
+                # print("{} keys: {}".format(p1, path[p1].keys()))
+                # print()
+                # print("Keys = valid points ? ", len(path[p1]) == len(valid_points))
+                # # print("{} keys: {}".format(p1, path[p1].keys()))
+                # print("diff: ", set(valid_points).difference(set(path[p1].keys())))
+                # print("closed: ", closed)
+                # print(len(open.list))
+                # print()
                                 # import time
                                 # time.sleep(3)
             return path
-    
+
         return getDistanceOnMaze(self.walls)
+
 
     def chooseAction(self, gameState):
         pass
@@ -866,11 +878,11 @@ class WaStarInvader(DummyAgent):
             
             closestFood, distance = self.closestObject(foodList, updatedGameState)
             print("Goal: " + str(closestFood))
-            #if abs(closestFood[0] - currentPosition[0]) > 10:
-            #    actions = self.pathDict[currentPosition][closestFood]
-            #else:
-            closestFoodProblem = PositionSearchProblem(updatedGameState, updatedGameState.getAgentPosition(self.index), goal=closestFood)
-            actions = wastarSearch(closestFoodProblem, manhattanHeuristic)
+            if abs(closestFood[0] - currentPosition[0]) > 10:
+                actions = self.pathDict[currentPosition][closestFood]
+            else:
+                closestFoodProblem = PositionSearchProblem(updatedGameState, updatedGameState.getAgentPosition(self.index), goal=closestFood)
+                actions = wastarSearch(closestFoodProblem, manhattanHeuristic)
             self.updateScore(updatedGameState)
             if closestFood in foodList:
                 print("Goal Type: Food")
