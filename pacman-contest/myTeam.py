@@ -511,6 +511,38 @@ class DummyAgent(CaptureAgent):
                             open.push(temp)
         return []
 
+    def depthFirstSearchSafeDetector(self, problem, currentCoordinate, wallList, opponentList):
+    
+        for element in opponentList:
+            if element not in wallList:
+                wallList.append(element)
+        if currentCoordinate not in wallList:
+            wallList.append(currentCoordinate)
+    
+        open = util.Stack()
+        initState = (problem.getStartState(), ['Stop'], 0)
+        open.push(initState)
+        closed = []
+    
+        while not open.isEmpty():
+            currState = open.pop()
+            currPos = currState[0]
+            currPath = currState[1]
+            currCost = currState[2]
+        
+            if currPos in self.safeCoordinates:
+                return currPath[1:]
+            else:
+                closed.append(currPos)
+            if currState not in closed:
+                successors = problem.getSuccessors(currPos)
+                if len(successors) > 0:
+                    for each in successors:
+                        if each[0] not in closed and each[0] != currentCoordinate and each[0] not in wallList:
+                            temp = (each[0], currPath + [each[1]], currCost + each[2])
+                            open.push(temp)
+        return []
+
     def depthFirstSearchCycleDetecter(self, problem):
         
         open = util.Stack()
@@ -615,41 +647,76 @@ class WaStarInvader(DummyAgent):
                 if len(actions) != 0:
                     return actions
         
+        # if any direction can lead to safe coordinate, then choose it.
+        if len(opponentList) != 0:
+            x, y = currentPosition[0], currentPosition[1]
+            newStartingPoint = []
+            if (x + 1, y) not in wallList and (x + 1, y) not in opponentList:
+                newStartingPoint.append((x + 1, y))
+            if (x - 1, y) not in wallList and (x - 1, y) not in opponentList:
+                newStartingPoint.append((x - 1, y))
+            if (x, y + 1) not in wallList and (x, y + 1) not in opponentList:
+                newStartingPoint.append((x, y + 1))
+            if (x, y - 1) not in wallList and (x, y - 1) not in opponentList:
+                newStartingPoint.append((x, y - 1))
+            safeLeadingDirection = []
+            for startingPoint in newStartingPoint:
+                dfsProblem = PositionSearchProblem(gameState, startingPoint)
+                path = self.depthFirstSearchSafeDetector(dfsProblem, currentPosition, self.getWallList(gameState), self.getOpponentList(gameState))
+                if len(path) != 0:
+                    if startingPoint == (x + 1, y):
+                        safeLeadingDirection.append("East")
+                    elif startingPoint == (x - 1, y):
+                        safeLeadingDirection.append("West")
+                    elif startingPoint == (x, y + 1):
+                        safeLeadingDirection.append("North")
+                    elif startingPoint == (x, y - 1):
+                        safeLeadingDirection.append("South")
+            if len(safeLeadingDirection) != 0:
+                selectedAction = random.choice(safeLeadingDirection)
+                safeLeadingDirection[0] = selectedAction
+                return safeLeadingDirection
+        
+        # if non of the neighbour point can lead to safe coordinate, then randomly choose the direction which can maximize the distance to ghosts.
         if len(opponentList) != 0:
             distanceToGhost = -1 * sys.maxsize + 1
-            wisestAction = None
+            wisestAction = []
+            distanceStorage = {}
             x, y = currentPosition[0], currentPosition[1]
             if (x + 1, y) not in wallList:
                 tempDistance = 0
                 for opponent in opponentList:
                     tempDistance += self.getMazeDistance((x + 1, y), opponent)
+                distanceStorage["East"] = tempDistance
                 if tempDistance > distanceToGhost:
                     distanceToGhost = tempDistance
-                    wisestAction = "East"
             if (x - 1, y) not in wallList:
                 tempDistance = 0
                 for opponent in opponentList:
                     tempDistance += self.getMazeDistance((x - 1, y), opponent)
+                distanceStorage["West"] = tempDistance
                 if tempDistance > distanceToGhost:
                     distanceToGhost = tempDistance
-                    wisestAction = "West"
             if (x, y + 1) not in wallList:
                 tempDistance = 0
                 for opponent in opponentList:
                     tempDistance += self.getMazeDistance((x, y + 1), opponent)
+                distanceStorage["North"] = tempDistance
                 if tempDistance > distanceToGhost:
                     distanceToGhost = tempDistance
-                    wisestAction = "North"
             if (x, y - 1) not in wallList:
                 tempDistance = 0
                 for opponent in opponentList:
                     tempDistance += self.getMazeDistance((x, y - 1), opponent)
+                distanceStorage["South"] = tempDistance
                 if tempDistance > distanceToGhost:
                     distanceToGhost = tempDistance
-                    wisestAction = "South"
-            if wisestAction is None:
+            for action in distanceStorage.keys():
+                if distanceStorage[action] == distanceToGhost:
+                    wisestAction.append(action)
+            if len(wisestAction) == 0:
                 return [self.chooseLegalRandomAction(currentPosition, wallList)[0]]
-            return [wisestAction]
+            return wisestAction
         else:
             if self.debug_message: print("No Surrounding Ghosts, this function shouldnt be used in this case. ")
             return [self.chooseLegalRandomAction(currentPosition, wallList)[0]]
@@ -1003,7 +1070,7 @@ class WaStarInvader(DummyAgent):
             if not capsulePrioritized:
                 for foodCoordinate in foodList:
                     # if self.isSafeCoordinate(foodCoordinate, updatedGameState):
-                    if len(self.areGhostsAround(updatedGameState, foodCoordinate, 7)) != 0:
+                    if len(self.areGhostsAround(updatedGameState, foodCoordinate, 7)) > 1:
                         if self.isSafeCoordinate(foodCoordinate, updatedGameState):
                             safeList.append(foodCoordinate)
                     elif foodCoordinate in self.safeCoordinates:
