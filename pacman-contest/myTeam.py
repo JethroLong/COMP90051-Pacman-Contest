@@ -363,6 +363,15 @@ class DummyAgent(CaptureAgent):
                 opponentPacmanList.append(opponentPacmanPosition)
         return opponentPacmanList
     
+    def areGhostsAround(self, gameState, testCoordinate, inclusiveRangeThreshold):
+        surroundingOpponentList = []
+        for opponentIndex in self.getOpponents(gameState):
+            opponentPosition = gameState.getAgentPosition(opponentIndex)
+            if opponentPosition is not None:
+                if testCoordinate[0] - inclusiveRangeThreshold <= opponentPosition[0] <= testCoordinate[0] + inclusiveRangeThreshold and testCoordinate[1] - inclusiveRangeThreshold <= opponentPosition[1] <= testCoordinate[1] + inclusiveRangeThreshold:
+                    surroundingOpponentList.append(opponentPosition)
+        return surroundingOpponentList
+    
     def getFoodList(self, gameState):
         return self.getFood(gameState).asList()
     
@@ -585,7 +594,7 @@ class WaStarInvader(DummyAgent):
                 goCapsuleProblem = PositionSearchProblem(gameState, currentPosition, goal=capsule)
                 actions = wastarSearch(goCapsuleProblem, manhattanHeuristic)
                 if len(actions) != 0:
-                    return actions[0]
+                    return actions
         
         if len(opponentList) != 0:
             distanceToGhost = -1 * sys.maxsize + 1
@@ -859,6 +868,9 @@ class WaStarInvader(DummyAgent):
             
             closestFood, distance = self.closestObject(foodList, updatedGameState)
             print("Goal: " + str(closestFood))
+            #if abs(closestFood[0] - currentPosition[0]) > 10:
+            #    actions = self.pathDict[currentPosition][closestFood]
+            #else:
             closestFoodProblem = PositionSearchProblem(updatedGameState, updatedGameState.getAgentPosition(self.index), goal=closestFood)
             actions = wastarSearch(closestFoodProblem, manhattanHeuristic)
             self.updateScore(updatedGameState)
@@ -964,7 +976,10 @@ class WaStarInvader(DummyAgent):
             safeList = []
             for foodCoordinate in foodList:
                 # if self.isSafeCoordinate(foodCoordinate, updatedGameState):
-                if foodCoordinate in self.safeCoordinates:
+                if len(self.areGhostsAround(updatedGameState, foodCoordinate, 7)) != 0:
+                    if self.isSafeCoordinate(foodCoordinate, updatedGameState):
+                        safeList.append(foodCoordinate)
+                elif foodCoordinate in self.safeCoordinates:
                     safeList.append(foodCoordinate)
             for capsuleCoordinate in capsuleList:
                 safeList.append(capsuleCoordinate)
