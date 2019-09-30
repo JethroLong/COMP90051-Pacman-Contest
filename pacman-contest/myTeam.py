@@ -201,8 +201,12 @@ class DummyAgent(CaptureAgent):
                     self.riskyCoordinates.append((x, y))
 
         self.pathDict = self.scanMaze()
-
         print("==========Pre-computation Done==========")
+
+        # path dict Test
+        # while True:
+        #     x1,y1,x2,y2 = input("type in source point and target point: ").split()
+        #     print("path: ", self.pathDict[(int(x1), int(y1))][(int(x2), int(y2))])
 
     def scanMaze(self):
         """
