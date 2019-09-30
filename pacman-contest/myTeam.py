@@ -982,18 +982,13 @@ class WaStarInvader(DummyAgent):
             closestFood, distance = self.closestObject(foodList, updatedGameState)
             if self.debug_message: print("Goal: " + str(closestFood))
             if abs(closestFood[0] - currentPosition[0]) > 10:
-                actions = self.pathDict[currentPosition][closestFood]
-                # TODO ====== UNDER CONSTRUCTION
-                # WARNING: This may not necessarily work !
+                actions = self.pathDict[currentPosition][closestFood].copy()
                 allowedActions = self.getLegalActionOfPosition(currentPosition, updatedGameState)
-                # TODO
                 if actions[0] == "Stop":
                     actions[0] = actions[1]
                 if actions[0] not in allowedActions:
                     selectedAction = random.choice(allowedActions)
                     actions[0] = selectedAction
-                # TODO ====== UNDER CONSTRUCTION END
-                # TODO NOTE: When using the pre-computed path, if the first action is in the new wallList, random choose another valid action.
             else:
                 closestFoodProblem = PositionSearchProblem(updatedGameState, updatedGameState.getAgentPosition(self.index), goal=closestFood)
                 actions = wastarSearch(closestFoodProblem, manhattanHeuristic)
