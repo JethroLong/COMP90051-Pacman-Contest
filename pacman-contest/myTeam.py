@@ -23,9 +23,6 @@ import re, os
 #################
 # Team creation #
 #################
-from graphicsDisplay import InfoPane
-
-
 def createTeam(firstIndex, secondIndex, isRed,
                first = 'WaStarInvader', second = 'WaStarDefender'):
     """
@@ -234,15 +231,12 @@ class DummyAgent(CaptureAgent):
                 init = (p1, [])
                 open.push(init)
                 closed = []
-
-                while len(path[p1]) < len(valid_points):
+                while len(closed) < len(valid_points):
                     currNode = open.pop()
                     currState = currNode[0]
                     currPath = currNode[1]
                     if currState not in closed:
-                        closed.append(currState)
                         successors = []
-
                         x, y = currState
                         if not walls[x][y + 1]:
                             successors.append( ((x, y + 1), Directions.NORTH) )
@@ -265,14 +259,27 @@ class DummyAgent(CaptureAgent):
                                      > Two for adjacency
                                      > Two for init and one another 
                                 '''
-                                path[currState][each[0]] = [each[1]]
-                                path[each[0]][currState] = getReversedDirection([each[1]])
-                                temp = (each[0], currPath + [each[1]])
-                                path[p1][each[0]] = temp[1]
-                                path[each[0]][p1] = getReversedDirection(temp[1])
-                                open.push(temp)
+                                if each[0] not in closed:
+                                    path[currState][each[0]] = [each[1]]
+                                    path[each[0]][currState] = getReversedDirection([each[1]])
+                                    assert len(path[currState][each[0]]) == len(path[each[0]][currState])
+                                    temp = (each[0], currPath + [each[1]])
+                                    path[p1][each[0]] = temp[1]
+                                    path[each[0]][p1] = getReversedDirection(temp[1])
+                                    assert len(path[p1][each[0]]) == len(path[each[0]][p1])
+                                    open.push(temp)
+
                                 # print("path: ", path)
-                                # print("len of {}: {},  len of valid: {}".format(p1, len(path[p1]), len(valid_points)))
+                        # print("len of {}: {},  len of valid: {}, open size: {}".format(p1, len(path[p1]), len(valid_points), len(open.list)))
+                        closed.append(currState)
+                # print("{} keys: {}".format(p1, path[p1].keys()))
+                # print()
+                # print("Keys = valid points ? ", len(path[p1]) == len(valid_points))
+                # # print("{} keys: {}".format(p1, path[p1].keys()))
+                # print("diff: ", set(valid_points).difference(set(path[p1].keys())))
+                # print("closed: ", closed)
+                # print(len(open.list))
+                # print()
                                 # import time
                                 # time.sleep(3)
             return path
@@ -280,8 +287,6 @@ class DummyAgent(CaptureAgent):
         return getDistanceOnMaze(self.walls)
 
 
-
-    
     def chooseAction(self, gameState):
         pass
     
