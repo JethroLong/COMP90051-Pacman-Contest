@@ -1342,14 +1342,14 @@ class WaStarDefender(DummyAgent):
       2.
 
     """
-
+    
     def __init__(self, index):
         super().__init__(index)
-
+        
         # Layout related
         self.maze_dim = None
         self.boarder_mid = None
-
+        
         # game state variables
         self.initialPosition = None
         self.currentPosition = None
@@ -1357,6 +1357,7 @@ class WaStarDefender(DummyAgent):
         self.searching = None
         self.eatenFoods = None
         self.walls = None
+    
     def registerInitialState(self, gameState):
         """
         This func will be called when:
@@ -1368,9 +1369,9 @@ class WaStarDefender(DummyAgent):
         self.walls = gameState.getWalls()
         # dimensions of the grid world w * h
         self.maze_dim = (gameState.data.layout.width, gameState.data.layout.height)
-
+        
         self.opponentIndices = self.getOpponents(gameState)
-
+        
         self.start = gameState.getAgentPosition(self.index)
         self.initialPosition = gameState.getAgentPosition(self.index)
         half_width = self.maze_dim[0] // 2
@@ -1381,8 +1382,8 @@ class WaStarDefender(DummyAgent):
             self.boarder_mid = (half_width - 1, self.maze_dim[1] // 2)
         self.myFood = self.getFoodYouAreDefending(gameState).asList()
         while self.walls[self.boarder_mid[0]][self.boarder_mid[1]]:
-            self.boarder_mid = (self.boarder_mid[0], self.boarder_mid[1]+1)
-
+            self.boarder_mid = (self.boarder_mid[0], self.boarder_mid[1] + 1)
+    
     def chooseAction(self, gameState):
         """
         The func as the agent's turn commences, choose action accordingly based on
@@ -1398,7 +1399,7 @@ class WaStarDefender(DummyAgent):
         """
         # update current status
         self.currentPosition = gameState.getAgentPosition(self.index)
-
+        
         invaders = self.searchInvadersPosition(gameState)
         print("invaders: ", invaders)
         if invaders:
@@ -1409,7 +1410,7 @@ class WaStarDefender(DummyAgent):
                 return self.scaredAction(gameState, invaders)
         else:
             return self.defend(gameState)  # routine patrol
-
+    
     def searchInvadersPosition(self, gameState):
         """
         Search all observable invaders (enemy pacmans)
@@ -1424,7 +1425,7 @@ class WaStarDefender(DummyAgent):
                 if gameState.getAgentState(opponent).isPacman:
                     invaders.append(gameState.getAgentPosition(opponent))
         return invaders
-
+    
     def scaredAction(self, gameState, invaders):
         """
          Actions a scared ghost may perform.
@@ -1439,7 +1440,7 @@ class WaStarDefender(DummyAgent):
             return self.suicide(gameState, enemyPosition)
         else:
             return self.flee(gameState, enemyPosition)
-
+    
     def suicide(self, gameState, enemyPosition):
         goHomeProblem = PositionSearchProblem(gameState, self.currentPosition, goal=enemyPosition)
         actions = wastarSearch(goHomeProblem, manhattanHeuristic)
@@ -1448,28 +1449,28 @@ class WaStarDefender(DummyAgent):
         else:
             # self.defend(gameState)
             return 'Stop'
-
+    
     def defend(self, gameState):
         currentFood = self.getFoodYouAreDefending(gameState).asList()
         if len(self.myFood) > len(currentFood) or self.searching:
             self.searching = True
             eatenFoods = [item for item in self.myFood if item not in currentFood]
-            if len(eatenFoods)==0:
+            if len(eatenFoods) == 0:
                 eatenFoods = self.eatenFoods
             else:
                 self.eatenFoods = eatenFoods
             self.myFood = currentFood
-            return self.findInvader(gameState,eatenFoods[0])
+            return self.findInvader(gameState, eatenFoods[0])
         else:
             self.myFood = currentFood
-
+            
             defendFoodProblem = PositionSearchProblem(gameState, self.currentPosition, goal=self.boarder_mid)
             actions = wastarSearch(defendFoodProblem, manhattanHeuristic)
             if len(actions) > 0:
                 return actions[0]
             else:
                 return 'Stop'
-
+    
     def findInvader(self, gameState, foodEaten):
         defendFoodProblem = PositionSearchProblem(gameState, self.currentPosition, goal=foodEaten)
         actions = wastarSearch(defendFoodProblem, manhattanHeuristic)
@@ -1477,17 +1478,15 @@ class WaStarDefender(DummyAgent):
             return actions[0]
         else:
             return 'Stop'
-
+    
     def flee(self, gameState, enemyPosition):
-        foodDefending, distance = self.closestObjectUsingPosition(self.getFoodYouAreDefending(gameState).asList(),
-                                                                  enemyPosition)
-        fleeProblem = FleeProblem(gameState, self.currentPosition, enemyPosition, goal=foodDefending)
-        actions = wastarSearch(fleeProblem, manhattanHeuristic)
+        fleeProblem = FleeProblem(gameState, self.currentPosition, enemyPosition, goal=enemyPosition)
+        actions = wastarSearch(fleeProblem, manhattanHeuristic_list)
         if len(actions) > 0:
             return actions[0]
         else:
             return 'Stop'
-
+    
     def hunt(self, gameState, invaders):
         """
         Actually it is defending food from opponent rather than hunting opponent
@@ -1495,7 +1494,7 @@ class WaStarDefender(DummyAgent):
         logic 1: Set the pacman's closet food as the goal
         logic 2: Set the pacman's position as the goal
         """
-
+        
         ''' 1
         foodDefending, distance = self.closestObjectUsingPosition(self.getFoodYouAreDefending(gameState).asList(),
                                                                   self.opponentPosition)
@@ -1510,14 +1509,14 @@ class WaStarDefender(DummyAgent):
         target = sorted(invaders,
                         key=lambda pos: pow(pos[0] - self.currentPosition[0], 2) + pow(pos[1] - self.currentPosition[1],
                                                                                        2))[0]
-
+        
         defendFoodProblem = PositionSearchProblem(gameState, self.currentPosition, goal=target)
         actions = wastarSearch(defendFoodProblem, manhattanHeuristic)
         if len(actions) > 0:
             return actions[0]
         else:
             return Directions.STOP
-
+    
     def farthestObjectUsingPosition(self, listOfObjects, currentPosition):
         farthestObj = None
         farthestDistance = 0
@@ -1526,17 +1525,18 @@ class WaStarDefender(DummyAgent):
                 farthestDistance = self.getMazeDistance(candidateObject, currentPosition)
                 farthestObj = candidateObject
         return farthestObj, farthestDistance
-
+    
     def getWidthandHeight(self, gameState):
         width = gameState.data.layout.width
         height = gameState.data.layout.height
         return width, height
-
+    
     def getFeatures(self, gameState, action):
         pass
-
+    
     def getWeights(self, gameState, action):
         pass
+
 
 ###################################
 #        Helper Funcs
@@ -1565,7 +1565,7 @@ def wastarSearch(problem, heuristic):
         
         if len(successors) > 0:
             for each in successors:
-                #if each not in wallList:
+                # if each not in wallList:
                 newState = each[0]
                 newPathCost = currPathCost + each[2]
                 if newState not in closed:
@@ -1574,11 +1574,22 @@ def wastarSearch(problem, heuristic):
     
     return []
 
+
 def manhattanHeuristic(position, problem, info={}):
     "The Manhattan distance heuristic for a PositionSearchProblem"
     xy1 = position
     xy2 = problem.goal
     return abs(xy1[0] - xy2[0]) + abs(xy1[1] - xy2[1])
+
+
+def manhattanHeuristic_list(position, problem, info={}):
+    "The Manhattan distance heuristic for a PositionSearchProblem"
+    xy1 = position
+    l = []
+    for g in problem.goal:
+        l.append(abs(xy1[0] - g[0]) + abs(xy1[1] - g[1]))
+    return min(l)
+
 
 ###################################
 #      Problem Gallery
@@ -1589,9 +1600,10 @@ class SearchProblem:
     """
     This class outlines the structure of a search problem, but doesn't implement
     any of the methods (in object-oriented terminology: an abstract class).
-  
+
     You do not need to change anything in this class, ever.
     """
+    
     def getStartState(self):
         """
         Returns the start state for the search problem.
@@ -1601,7 +1613,7 @@ class SearchProblem:
     def isGoalState(self, state):
         """
           state: Search state
-    
+
         Returns True if and only if the state is a valid goal state.
         """
         util.raiseNotDefined()
@@ -1609,7 +1621,7 @@ class SearchProblem:
     def getSuccessors(self, state):
         """
           state: Search state
-    
+
         For a given state, this should return a list of triples, (successor,
         action, stepCost), where 'successor' is a successor to the current
         state, 'action' is the action required to get there, and 'stepCost' is
@@ -1620,11 +1632,12 @@ class SearchProblem:
     def getCostOfActions(self, actions):
         """
          actions: A list of actions to take
-    
+
         This method returns the total cost of a particular sequence of actions.
         The sequence must be composed of legal moves.
         """
         util.raiseNotDefined()
+
 
 # PositionSearchProblem
 class PositionSearchProblem(SearchProblem):
@@ -1637,7 +1650,8 @@ class PositionSearchProblem(SearchProblem):
 
     Note: this search problem is fully specified; you should NOT change it.
     """
-    def __init__(self, gameState, startState, costFn = lambda x: 1, goal=(1,1), start=None, warn=True, visualize=False):
+    
+    def __init__(self, gameState, startState, costFn=lambda x: 1, goal=(1, 1), start=None, warn=True, visualize=False):
         """
         Stores the start and goal.
 
@@ -1652,42 +1666,18 @@ class PositionSearchProblem(SearchProblem):
         self.costFn = costFn
         self.visualize = visualize
         self.gameState = gameState
-
+        
         # For display purposes
-        self._visited, self._visitedlist, self._expanded = {}, [], 0 # DO NOT CHANGE
-
+        self._visited, self._visitedlist, self._expanded = {}, [], 0  # DO NOT CHANGE
+    
     def getStartState(self):
         return self.startState
-
+    
     def isGoalState(self, state):
         isGoal = state == self.goal
         
-        '''
-        if str(self.goal).startswith("HOME"):
-            param1, param2 = str(self.goal).split(" ")[1], str(self.goal).split(" ")[2]
-            if param2 == "<":
-                if state[0] < param1:
-                    return True
-                else:
-                    return False
-            elif param2 == ">=":
-                if state[0] >= param1:
-                    return True
-                else:
-                    return False
-        '''
-        '''
-        # For display purposes only
-        if isGoal and self.visualize:
-            self._visitedlist.append(state)
-            import __main__
-            if '_display' in dir(__main__):
-                if 'drawExpandedCells' in dir(__main__._display): #@UndefinedVariable
-                    __main__._display.drawExpandedCells(self._visitedlist) #@UndefinedVariable
-        '''
-
         return isGoal
-
+    
     def getSuccessors(self, state):
         """
         Returns successor states, the actions they require, and a cost of 1.
@@ -1699,44 +1689,45 @@ class PositionSearchProblem(SearchProblem):
          required to get there, and 'stepCost' is the incremental
          cost of expanding to that successor
         """
-
+        
         successors = []
         for action in [Directions.NORTH, Directions.SOUTH, Directions.EAST, Directions.WEST]:
-            x,y = state
+            x, y = state
             dx, dy = game.Actions.directionToVector(action)
             nextx, nexty = int(x + dx), int(y + dy)
             if not self.walls[nextx][nexty]:
                 nextState = (nextx, nexty)
                 cost = self.costFn(nextState)
-                successors.append( ( nextState, action, cost) )
-
+                successors.append((nextState, action, cost))
+        
         # Bookkeeping for display purposes
-        self._expanded += 1 # DO NOT CHANGE
+        self._expanded += 1  # DO NOT CHANGE
         if state not in self._visited:
             self._visited[state] = True
             self._visitedlist.append(state)
-
+        
         return successors
-
+    
     def getCostOfActions(self, actions):
         """
         Returns the cost of a particular sequence of actions. If those actions
         include an illegal move, return 999999.
         """
         if actions == None: return 999999
-        x,y= self.getStartState()
+        x, y = self.getStartState()
         cost = 0
         for action in actions:
             # Check figure out the next state and see whether its' legal
             dx, dy = game.Actions.directionToVector(action)
             x, y = int(x + dx), int(y + dy)
             if self.walls[x][y]: return 999999
-            cost += self.costFn((x,y))
+            cost += self.costFn((x, y))
         return cost
+
 
 # Consider the opponent pacman and his surrounding area as walls
 class FleeProblem(PositionSearchProblem):
-    def __init__(self, gameState, startState, opponent, costFn = lambda x: 1, goal=(1,1), start=None, warn=True, visualize=False):
+    def __init__(self, gameState, startState, opponent, costFn=lambda x: 1, goal=(1, 1), start=None, warn=True, visualize=False):
         """
         Stores the start and goal.
 
@@ -1745,17 +1736,23 @@ class FleeProblem(PositionSearchProblem):
         goal: A position in the gameState
         """
         self.walls = gameState.getWalls()
-        (x,y) = opponent
+        (x, y) = opponent
         self.walls[x][y] = True
-        self.walls[x+1][y] = True
-        self.walls[x-1][y] = True
-        self.walls[x][y+1] = True
-        self.walls[x][y-1] = True
+        self.walls[x + 1][y] = True
+        self.walls[x - 1][y] = True
+        self.walls[x][y + 1] = True
+        self.walls[x][y - 1] = True
         self.startState = startState
         if start != None: self.startState = start
-        self.goal = goal
+        x = goal[0]
+        y = goal[1]
+        self.goal = [(x + 2, y), (x - 2, y), (x + 1, y + 1), (x - 1, y + 1), (x + 1, y - 1), (x - 1, y - 1), (x, y + 2), (x, y - 2)]
         self.costFn = costFn
         self.visualize = visualize
-
+        
         # For display purposes
-        self._visited, self._visitedlist, self._expanded = {}, [], 0 # DO NOT CHANGE
+        self._visited, self._visitedlist, self._expanded = {}, [], 0  # DO NOT CHANGE
+    
+    def isGoalState(self, state):
+        isGoal = state in self.goal
+        return isGoal
