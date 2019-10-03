@@ -787,25 +787,25 @@ class WaStarInvader(DummyAgent):
     def isWallCornerCoordinate(self, coordinate, wallList):
         pass
         
-    def updateHungrySteps(self, currentPosition, nextAction, foodList, capsuleList, opponentPacmanList):
+    def updateHungrySteps(self, currentPosition, nextAction, foodList, capsuleList, opponentPacmanList, opponentList):
         x, y = currentPosition[0], currentPosition[1]
         if nextAction == "North":
-            if (x, y + 1) in foodList or (x, y + 1) in capsuleList or (x, y + 1) in opponentPacmanList:
+            if (x, y + 1) in foodList or (x, y + 1) in capsuleList or (x, y + 1) in opponentPacmanList or (x, y + 1) in opponentList:
                 self.hungrySteps = 0
             else:
                 self.hungrySteps += 1
         if nextAction == "South":
-            if (x, y - 1) in foodList or (x, y - 1) in capsuleList or (x, y - 1) in opponentPacmanList:
+            if (x, y - 1) in foodList or (x, y - 1) in capsuleList or (x, y - 1) in opponentPacmanList or (x, y - 1) in opponentList:
                 self.hungrySteps = 0
             else:
                 self.hungrySteps += 1
         if nextAction == "West":
-            if (x - 1, y) in foodList or (x - 1, y) in capsuleList or (x - 1, y) in opponentPacmanList:
+            if (x - 1, y) in foodList or (x - 1, y) in capsuleList or (x - 1, y) in opponentPacmanList or (x - 1, y) in opponentList:
                 self.hungrySteps = 0
             else:
                 self.hungrySteps += 1
         if nextAction == "East":
-            if (x + 1, y) in foodList or (x + 1, y) in capsuleList or (x + 1, y) in opponentPacmanList:
+            if (x + 1, y) in foodList or (x + 1, y) in capsuleList or (x + 1, y) in opponentPacmanList or (x + 1, y) in opponentList:
                 self.hungrySteps = 0
             else:
                 self.hungrySteps += 1
@@ -836,7 +836,7 @@ class WaStarInvader(DummyAgent):
         if len(actions) == 0:
             # actions.append("Stop")
             # Don't Stop, stop is the most stupidest move
-            if self.debug_message: print("Empty Action List, Random Select Legal Actions")
+            if self.debug_message: print("Empty Action List, Randomly Select Legal Actions")
             # actions = self.chooseLegalRandomAction(currentPosition, wallList)
             actions = self.bestAvoidGhostAction(gameState, currentPosition, wallList, self.getOpponentList(gameState), self.getCapsuleList(gameState))
         if self.debug_message: print("Action: " + actions[0])
@@ -1008,6 +1008,8 @@ class WaStarInvader(DummyAgent):
             if len(foodList) == 0:
                 actions = self.chooseLegalRandomAction(currentPosition, wallList)
                 if self.debug_message: print("Empty food list, randomly choose legal action")
+                self.updateHungrySteps(currentPosition, actions[0], foodList, capsuleList, opponentPacmanList)
+                print(str(self.hungrySteps))
                 return actions[0]
             
             closestFood, distance = self.closestObject(foodList, updatedGameState)
@@ -1041,6 +1043,8 @@ class WaStarInvader(DummyAgent):
             gameState = updatedGameState
             if actions[0] is None or actions[0] == "None":
                 if self.debug_message: print("ERROR !!!")
+            self.updateHungrySteps(currentPosition, actions[0], foodList, capsuleList, opponentPacmanList)
+            print(str(self.hungrySteps))
             return actions[0]
         
         
@@ -1094,6 +1098,8 @@ class WaStarInvader(DummyAgent):
                 gameState = updatedGameState
                 if actions[0] is None or actions[0] == "None":
                     if self.debug_message: print("ERROR !!!")
+                self.updateHungrySteps(currentPosition, actions[0], foodList, capsuleList, opponentPacmanList)
+                print(str(self.hungrySteps))
                 return actions[0]
             
             closestFoodProblem = PositionSearchProblem(updatedGameState, updatedGameState.getAgentPosition(self.index), goal=closestFood)
@@ -1119,6 +1125,8 @@ class WaStarInvader(DummyAgent):
             gameState = updatedGameState
             if actions[0] is None or actions[0] == "None":
                 if self.debug_message: print("ERROR !!!")
+            self.updateHungrySteps(currentPosition, actions[0], foodList, capsuleList, opponentPacmanList)
+            print(str(self.hungrySteps))
             return actions[0]
 
         elif self.mode == "invader hunting mode" and len(opponentList) != 0:
@@ -1148,6 +1156,8 @@ class WaStarInvader(DummyAgent):
                 gameState = updatedGameState
                 if actions[0] is None or actions[0] == "None":
                     if self.debug_message: print("ERROR !!!")
+                self.updateHungrySteps(currentPosition, actions[0], foodList, capsuleList, opponentPacmanList)
+                print(str(self.hungrySteps))
                 return actions[0]
             closestSafe, distance = self.closestObject(safeList, updatedGameState)
             if self.debug_message: print("Goal: " + str(closestSafe))
@@ -1164,6 +1174,8 @@ class WaStarInvader(DummyAgent):
                 if self.debug_message: print("Action: " + str(actions[0]))
                 if actions[0] is None or actions[0] == "None":
                     if self.debug_message: print("ERROR !!!")
+                self.updateHungrySteps(currentPosition, actions[0], foodList, capsuleList, opponentPacmanList)
+                print(str(self.hungrySteps))
                 return actions[0]
             
             self.updateScore(updatedGameState)
@@ -1178,7 +1190,7 @@ class WaStarInvader(DummyAgent):
                 if self.debug_message: print("Go Home")
                 actions = self.retreat(updatedGameState)
                 if len(actions) == 0:
-                    if self.debug_message: print("Empty Action List, Random Select Legal Actions")
+                    if self.debug_message: print("Empty Action List, Randomly Select Legal Actions")
                     # actions = self.chooseLegalRandomAction(currentPosition, wallList)
                     actions = self.bestAvoidGhostAction(gameState, currentPosition, wallList, self.getOpponentList(gameState), self.getCapsuleList(gameState))
             if self.debug_message: print("Action: " + actions[0])
@@ -1189,6 +1201,8 @@ class WaStarInvader(DummyAgent):
             gameState = updatedGameState
             if actions[0] is None or actions[0] == "None":
                 if self.debug_message: print("ERROR !!!")
+            self.updateHungrySteps(currentPosition, actions[0], foodList, capsuleList, opponentPacmanList)
+            print(str(self.hungrySteps))
             return actions[0]
         
         
@@ -1220,7 +1234,7 @@ class WaStarInvader(DummyAgent):
                 if self.debug_message: print("Goal Type: Closest Home")
                 if len(actions) == 0:
                     # actions.append("Stop")
-                    if self.debug_message: print("Empty Action List, Random Select Legal Actions")
+                    if self.debug_message: print("Empty Action List, Randomly Select Legal Actions")
                     # actions = self.chooseLegalRandomAction(currentPosition, wallList)
                     actions = self.bestAvoidGhostAction(gameState, currentPosition, wallList, self.getOpponentList(gameState), self.getCapsuleList(gameState))
                 if self.debug_message: print("Action: " + actions[0])
@@ -1231,6 +1245,8 @@ class WaStarInvader(DummyAgent):
                 gameState = updatedGameState
                 if actions[0] is None or actions[0] == "None":
                     if self.debug_message: print("ERROR !!!")
+                self.updateHungrySteps(currentPosition, actions[0], foodList, capsuleList, opponentPacmanList)
+                print(str(self.hungrySteps))
                 return actions[0]
             
             closestFood, distance = self.closestObject(goodList, updatedGameState)
@@ -1259,6 +1275,8 @@ class WaStarInvader(DummyAgent):
             gameState = updatedGameState
             if actions[0] is None or actions[0] == "None":
                 if self.debug_message: print("ERROR !!!")
+            self.updateHungrySteps(currentPosition, actions[0], foodList, capsuleList, opponentPacmanList)
+            print(str(self.hungrySteps))
             return actions[0]
         
         
@@ -1282,7 +1300,7 @@ class WaStarInvader(DummyAgent):
             if self.debug_message: print("Goal Type: Closest Home")
             if len(actions) == 0:
                 # actions.append("Stop")
-                if self.debug_message: print("Empty Action List, Random Select Legal Actions")
+                if self.debug_message: print("Empty Action List, Randomly Select Legal Actions")
                 actions = []
                 x, y = currentPosition[0], currentPosition[1]
                 if (x - 1, y) not in wallList:
@@ -1305,6 +1323,8 @@ class WaStarInvader(DummyAgent):
             gameState = updatedGameState
             if actions[0] is None or actions[0] == "None":
                 if self.debug_message: print("ERROR !!!")
+            self.updateHungrySteps(currentPosition, actions[0], foodList, capsuleList, opponentPacmanList)
+            print(str(self.hungrySteps))
             return actions[0]
            
     def updateScore(self, gameState):
