@@ -102,6 +102,12 @@ class DummyAgent(CaptureAgent):
     # Risky Coordinates
     riskyCoordinates = []
     
+    # Goal Attempt History: Keep track of history of how many times this goal has failed to be reached.
+    # IDEA, under consideration
+    
+    # Steps from the last food / capsule / ghost eaten
+    hungrySteps = 0
+    
     # Before submitting the code, turn this to False to hide debug messages
     debug_message = True # Turn to False before submission # TODO
 
@@ -781,6 +787,31 @@ class WaStarInvader(DummyAgent):
     def isWallCornerCoordinate(self, coordinate, wallList):
         pass
         
+    def updateHungrySteps(self, currentPosition, nextAction, foodList, capsuleList, opponentPacmanList):
+        x, y = currentPosition[0], currentPosition[1]
+        if nextAction == "North":
+            if (x, y + 1) in foodList or (x, y + 1) in capsuleList or (x, y + 1) in opponentPacmanList:
+                self.hungrySteps = 0
+            else:
+                self.hungrySteps += 1
+        if nextAction == "South":
+            if (x, y - 1) in foodList or (x, y - 1) in capsuleList or (x, y - 1) in opponentPacmanList:
+                self.hungrySteps = 0
+            else:
+                self.hungrySteps += 1
+        if nextAction == "West":
+            if (x - 1, y) in foodList or (x - 1, y) in capsuleList or (x - 1, y) in opponentPacmanList:
+                self.hungrySteps = 0
+            else:
+                self.hungrySteps += 1
+        if nextAction == "East":
+            if (x + 1, y) in foodList or (x + 1, y) in capsuleList or (x + 1, y) in opponentPacmanList:
+                self.hungrySteps = 0
+            else:
+                self.hungrySteps += 1
+        if nextAction == "Stop":
+            self.hungrySteps += 1
+        return
     
     def retreat(self, gameState):
         width, height = self.getWidthandHeight(gameState)
