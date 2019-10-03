@@ -25,7 +25,7 @@ import re, os
 #################
 
 def createTeam(firstIndex, secondIndex, isRed,
-               first = 'WaStarInvader', second = 'WaStarDefender'):
+               first = 'WaStarInvader', second = 'WaStarInvader'):
     """
     This function should return a list of two agents that will form the
     team, initialized using firstIndex and secondIndex as their agent
