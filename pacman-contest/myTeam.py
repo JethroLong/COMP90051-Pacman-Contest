@@ -1008,7 +1008,7 @@ class WaStarInvader(DummyAgent):
             if len(foodList) == 0:
                 actions = self.chooseLegalRandomAction(currentPosition, wallList)
                 if self.debug_message: print("Empty food list, randomly choose legal action")
-                self.updateHungrySteps(currentPosition, actions[0], foodList, capsuleList, opponentPacmanList)
+                self.updateHungrySteps(currentPosition, actions[0], foodList, capsuleList, opponentPacmanList, opponentList)
                 print(str(self.hungrySteps))
                 return actions[0]
             
@@ -1043,7 +1043,7 @@ class WaStarInvader(DummyAgent):
             gameState = updatedGameState
             if actions[0] is None or actions[0] == "None":
                 if self.debug_message: print("ERROR !!!")
-            self.updateHungrySteps(currentPosition, actions[0], foodList, capsuleList, opponentPacmanList)
+            self.updateHungrySteps(currentPosition, actions[0], foodList, capsuleList, opponentPacmanList, opponentList)
             print(str(self.hungrySteps))
             return actions[0]
         
@@ -1098,7 +1098,7 @@ class WaStarInvader(DummyAgent):
                 gameState = updatedGameState
                 if actions[0] is None or actions[0] == "None":
                     if self.debug_message: print("ERROR !!!")
-                self.updateHungrySteps(currentPosition, actions[0], foodList, capsuleList, opponentPacmanList)
+                self.updateHungrySteps(currentPosition, actions[0], foodList, capsuleList, opponentPacmanList, opponentList)
                 print(str(self.hungrySteps))
                 return actions[0]
             
@@ -1125,7 +1125,7 @@ class WaStarInvader(DummyAgent):
             gameState = updatedGameState
             if actions[0] is None or actions[0] == "None":
                 if self.debug_message: print("ERROR !!!")
-            self.updateHungrySteps(currentPosition, actions[0], foodList, capsuleList, opponentPacmanList)
+            self.updateHungrySteps(currentPosition, actions[0], foodList, capsuleList, opponentPacmanList, opponentList)
             print(str(self.hungrySteps))
             return actions[0]
 
@@ -1156,7 +1156,7 @@ class WaStarInvader(DummyAgent):
                 gameState = updatedGameState
                 if actions[0] is None or actions[0] == "None":
                     if self.debug_message: print("ERROR !!!")
-                self.updateHungrySteps(currentPosition, actions[0], foodList, capsuleList, opponentPacmanList)
+                self.updateHungrySteps(currentPosition, actions[0], foodList, capsuleList, opponentPacmanList, opponentList)
                 print(str(self.hungrySteps))
                 return actions[0]
             closestSafe, distance = self.closestObject(safeList, updatedGameState)
@@ -1174,7 +1174,7 @@ class WaStarInvader(DummyAgent):
                 if self.debug_message: print("Action: " + str(actions[0]))
                 if actions[0] is None or actions[0] == "None":
                     if self.debug_message: print("ERROR !!!")
-                self.updateHungrySteps(currentPosition, actions[0], foodList, capsuleList, opponentPacmanList)
+                self.updateHungrySteps(currentPosition, actions[0], foodList, capsuleList, opponentPacmanList, opponentList)
                 print(str(self.hungrySteps))
                 return actions[0]
             
@@ -1201,7 +1201,7 @@ class WaStarInvader(DummyAgent):
             gameState = updatedGameState
             if actions[0] is None or actions[0] == "None":
                 if self.debug_message: print("ERROR !!!")
-            self.updateHungrySteps(currentPosition, actions[0], foodList, capsuleList, opponentPacmanList)
+            self.updateHungrySteps(currentPosition, actions[0], foodList, capsuleList, opponentPacmanList, opponentList)
             print(str(self.hungrySteps))
             return actions[0]
         
@@ -1245,7 +1245,7 @@ class WaStarInvader(DummyAgent):
                 gameState = updatedGameState
                 if actions[0] is None or actions[0] == "None":
                     if self.debug_message: print("ERROR !!!")
-                self.updateHungrySteps(currentPosition, actions[0], foodList, capsuleList, opponentPacmanList)
+                self.updateHungrySteps(currentPosition, actions[0], foodList, capsuleList, opponentPacmanList, opponentList)
                 print(str(self.hungrySteps))
                 return actions[0]
             
@@ -1275,7 +1275,7 @@ class WaStarInvader(DummyAgent):
             gameState = updatedGameState
             if actions[0] is None or actions[0] == "None":
                 if self.debug_message: print("ERROR !!!")
-            self.updateHungrySteps(currentPosition, actions[0], foodList, capsuleList, opponentPacmanList)
+            self.updateHungrySteps(currentPosition, actions[0], foodList, capsuleList, opponentPacmanList, opponentList)
             print(str(self.hungrySteps))
             return actions[0]
         
@@ -1323,7 +1323,7 @@ class WaStarInvader(DummyAgent):
             gameState = updatedGameState
             if actions[0] is None or actions[0] == "None":
                 if self.debug_message: print("ERROR !!!")
-            self.updateHungrySteps(currentPosition, actions[0], foodList, capsuleList, opponentPacmanList)
+            self.updateHungrySteps(currentPosition, actions[0], foodList, capsuleList, opponentPacmanList, opponentList)
             print(str(self.hungrySteps))
             return actions[0]
            
