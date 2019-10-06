@@ -900,7 +900,7 @@ class WaStarInvader(DummyAgent):
                         if candidateOpponent not in wallList:
                             wallList.append(candidateOpponent)
                             wall_grids[candidateOpponent[0]][candidateOpponent[1]] = True
-                        considerGhostSurroundingAreaDistanceThreshold = 2
+                        considerGhostSurroundingAreaDistanceThreshold = 3
                         if distance <= considerGhostSurroundingAreaDistanceThreshold:
                             # Right now, consider 4 surrounding cells as wall
                             # Can also consider all 8 surrounding cells as wall # IDEA
@@ -1863,4 +1863,34 @@ class FleeProblem(PositionSearchProblem):
     
     def isGoalState(self, state):
         isGoal = state in self.goal
+        return isGoal
+    
+class AvoidProblem(FleeProblem):
+    def __init__(self, gameState, startState, opponent, costFn=lambda x: 1, goal=(1, 1), start=None, warn=True,
+                 visualize=False):
+        """
+        Stores the start and goal.
+
+        gameState: A GameState object (pacman.py)
+        costFn: A function from a search state (tuple) to a non-negative number
+        goal: A position in the gameState
+        """
+        self.walls = gameState.getWalls()
+        (x, y) = opponent
+        self.walls[x][y] = True
+        self.walls[x + 1][y] = True
+        self.walls[x - 1][y] = True
+        self.walls[x][y + 1] = True
+        self.walls[x][y - 1] = True
+        self.startState = startState
+        if start != None: self.startState = start
+        self.goal = goal
+        self.costFn = costFn
+        self.visualize = visualize
+
+        # For display purposes
+        self._visited, self._visitedlist, self._expanded = {}, [], 0  # DO NOT CHANGE
+
+    def isGoalState(self, state):
+        isGoal = state == self.goal
         return isGoal
