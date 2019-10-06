@@ -1550,7 +1550,21 @@ class WaStarDefender(DummyAgent):
             self.myFood = currentFood
             if self.eatDefender:
                 return self.stealFood(gameState)
-            defendFoodProblem = PositionSearchProblem(gameState, self.currentPosition, goal=self.boarder_mid)
+            if gameState.getAgentState(self.index).isPacman:
+                re = False
+                for opponent in self.opponentIndices:
+                    # if in observable area,
+                    if gameState.getAgentPosition(opponent) and (not gameState.getAgentState(opponent).isPacman) and \
+                            gameState.getAgentState(opponent).scaredTimer <= 0:
+                        avoid = gameState.getAgentPosition(opponent)
+                        re = True
+                        break
+                if re:
+                    defendFoodProblem = AvoidProblem(gameState, self.currentPosition, opponent=avoid, goal=self.boarder_mid)
+                else:
+                    defendFoodProblem = PositionSearchProblem(gameState, self.currentPosition, goal=self.boarder_mid)
+            else:
+                defendFoodProblem = PositionSearchProblem(gameState, self.currentPosition, goal=self.boarder_mid)
             actions = wastarSearch(defendFoodProblem, manhattanHeuristic)
             if len(actions) > 0:
                 return actions[0]
@@ -1574,7 +1588,8 @@ class WaStarDefender(DummyAgent):
             re = False
             for opponent in self.opponentIndices:
                 # if in observable area
-                if gameState.getAgentPosition(opponent):
+                if gameState.getAgentPosition(opponent) and gameState.getAgentState(opponent).isPacman and gameState. \
+                        getAgentState(opponent).scaredTimer <= 0:
                     avoid = gameState.getAgentPosition(opponent)
                     re = True
                     break
@@ -1587,13 +1602,28 @@ class WaStarDefender(DummyAgent):
                 return actions[0]
             else:
                 return 'Stop'
+        # No food to eat, go home and defend
         else:
             self.eatDefender = False
             return self.defend(gameState)
     
     def findInvader(self, gameState, foodEaten):
-        defendFoodProblem = PositionSearchProblem(gameState, self.currentPosition, goal=foodEaten)
-        actions = wastarSearch(defendFoodProblem, manhattanHeuristic)
+        if gameState.getAgentState(self.index).isPacman:
+            re = False
+            for opponent in self.opponentIndices:
+                # if in observable area,
+                if gameState.getAgentPosition(opponent) and (not gameState.getAgentState(opponent).isPacman) and \
+                        gameState.getAgentState(opponent).scaredTimer <= 0:
+                    avoid = gameState.getAgentPosition(opponent)
+                    re = True
+                    break
+            if re:
+                closestFoodProblem = AvoidProblem(gameState, self.currentPosition, opponent=avoid, goal=foodEaten)
+            else:
+                closestFoodProblem = PositionSearchProblem(gameState, self.currentPosition, goal=foodEaten)
+        else:
+            closestFoodProblem = PositionSearchProblem(gameState, self.currentPosition, goal=foodEaten)
+        actions = wastarSearch(closestFoodProblem, manhattanHeuristic)
         if len(actions) > 0:
             return actions[0]
         else:
@@ -1630,7 +1660,21 @@ class WaStarDefender(DummyAgent):
         target = sorted(invaders,
                         key=lambda pos: pow(pos[0] - self.currentPosition[0], 2) + pow(pos[1] - self.currentPosition[1],
                                                                                        2))[0]
-        defendFoodProblem = PositionSearchProblem(gameState, self.currentPosition, goal=target)
+        if gameState.getAgentState(self.index).isPacman:
+            re = False
+            for opponent in self.opponentIndices:
+                # if in observable area,
+                if gameState.getAgentPosition(opponent) and (not gameState.getAgentState(opponent).isPacman) and \
+                        gameState.getAgentState(opponent).scaredTimer <= 0:
+                    avoid = gameState.getAgentPosition(opponent)
+                    re = True
+                    break
+            if re:
+                defendFoodProblem = AvoidProblem(gameState, self.currentPosition, opponent=avoid, goal=target)
+            else:
+                defendFoodProblem = PositionSearchProblem(gameState, self.currentPosition, goal=target)
+        else:
+            defendFoodProblem = PositionSearchProblem(gameState, self.currentPosition, goal=target)
         actions = wastarSearch(defendFoodProblem, manhattanHeuristic)
         if len(actions) > 0:
             return actions[0]
