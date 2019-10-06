@@ -251,19 +251,24 @@ class DummyAgent(CaptureAgent):
         def getDistanceOnMaze(walls):
             valid_points = [(x, y) for x in range(self.maze_dim[0]) for y in range(self.maze_dim[1]) if
                             (x, y) not in walls.asList()]
-            open = util.Queue()
             path = {}
+            debug = False
             for p1 in valid_points:
+                open = util.Queue()
                 if p1 not in path.keys():
                     path[p1] = {p1: {}}
                 path[p1][p1] = []
                 init = (p1, [])
                 open.push(init)
                 closed = []
+                if debug: print("\ninitial (32, 16): ", path[p1])
                 while len(closed) < len(valid_points):
                     currNode = open.pop()
                     currState = currNode[0]
                     currPath = currNode[1]
+                    if debug:
+                        print("\nCurrent Node: ", currState)
+                        if (12, 4) in path[(32, 16)]: print("(32,16) --> (12, 4): ", path[(32, 16)][(12, 4)])
                     if currState not in closed:
                         successors = []
                         x, y = currState
@@ -275,6 +280,7 @@ class DummyAgent(CaptureAgent):
                             successors.append( ((x + 1, y), Directions.EAST) )
                         if not walls[x - 1][y]:
                             successors.append( ((x - 1, y), Directions.WEST) )
+                        if debug: print("Node {} not visited before, successor: {}\n".format(currState, successors))
                         if len(successors) > 0:
                             for each in successors:
                                 if currState not in path.keys(): path[currState] = {}
@@ -301,6 +307,8 @@ class DummyAgent(CaptureAgent):
                                 # print("path: ", path)
                         # print("len of {}: {},  len of valid: {}, open size: {}".format(p1, len(path[p1]), len(valid_points), len(open.list)))
                         closed.append(currState)
+                        import time
+                        if debug: time.sleep(0.1)
                 # print("{} keys: {}".format(p1, path[p1].keys()))
                 # print()
                 # print("Keys = valid points ? ", len(path[p1]) == len(valid_points))
@@ -848,7 +856,7 @@ class WaStarInvader(DummyAgent):
         return actions
     
     def chooseAction(self, gameState):
-    
+        
         scaredTime = 0
         opponentDict = dict()
         numberOfScaredGhost = 0
@@ -1358,7 +1366,11 @@ class WaStarInvader(DummyAgent):
     def updateMode(self, gameState, scaredTime, closestOpponentDistance):
         boardWidth, boardHeight = self.getWidthandHeight(gameState)
         currentPosition = gameState.getAgentPosition(self.index)
-
+        timeleft = gameState.data.timeleft
+        
+        if int(timeleft / 4) <= 40 and ((self.red and currentPosition[0] >= int(boardWidth / 2)) or (not self.red and currentPosition[0] < int(boardWidth / 2))):
+            self.mode = "invader retreat mode"
+            return
         if len(self.getFood(gameState).asList()) <= 2:
             self.mode = "invader retreat mode"
             return
