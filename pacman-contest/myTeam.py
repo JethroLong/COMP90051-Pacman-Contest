@@ -321,6 +321,27 @@ class DummyAgent(CaptureAgent):
 
         return getDistanceOnMaze(self.walls)
 
+    def selectRandomGoal(self, myPos, nearestGoals, temperature, debug=False):
+        '''
+        Pick one from top-k nearest goal
+        :param myPos: (x, y) my current position
+        :param nearestGoals: a list of potential goals
+        :param temperature: take counter as input --> uncertainty factor, the higher temperature gives more randomness
+        :return: picked goal point (x, y)
+        '''
+        import numpy as np
+
+        inverseDists = [1./len(self.pathDict[myPos][goal]) for goal in nearestGoals]
+        if debug:
+            print("Dist: {}\nDist inverse: {}".format([1./len(self.pathDict[myPos][goal]) for goal in nearestGoals], inverseDists))
+        inverseDists = np.asarray(inverseDists).astype(np.float32) / (0.05*pow(temperature, temperature))
+        probability = np.exp(inverseDists) / float(sum(np.exp(inverseDists)))
+        if debug:
+            print("Goals: {}\nProbs: {}".format(nearestGoals, probability))
+        seletedGoal = np.argmax(np.random.multinomial(1, probability, 1))
+        if debug: print("Pick: ", nearestGoals[seletedGoal])
+        return nearestGoals[seletedGoal]
+
     def chooseAction(self, gameState):
         pass
     
