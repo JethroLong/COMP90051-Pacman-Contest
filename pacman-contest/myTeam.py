@@ -204,9 +204,10 @@ class DummyAgent(CaptureAgent):
         print("==========Pre-computation Done==========")
 
         # path dict Test
-        # while True:
-        #     x1,y1,x2,y2 = input("type in source point and target point: ").split()
-        #     print("path: ", self.pathDict[(int(x1), int(y1))][(int(x2), int(y2))])
+        while True:
+            x1, y1, x2, y2 = input("\ntype in sou"
+                                   "rce point and target point: ").split()
+            print("path: ", self.pathDict[(int(x1), int(y1))][(int(x2), int(y2))])
 
     def scanMaze(self):
         """
@@ -226,19 +227,24 @@ class DummyAgent(CaptureAgent):
         def getDistanceOnMaze(walls):
             valid_points = [(x, y) for x in range(self.maze_dim[0]) for y in range(self.maze_dim[1]) if
                             (x, y) not in walls.asList()]
-            open = util.Queue()
             path = {}
+            debug = False
             for p1 in valid_points:
+                open = util.Queue()
                 if p1 not in path.keys():
                     path[p1] = {p1: {}}
                 path[p1][p1] = []
                 init = (p1, [])
                 open.push(init)
                 closed = []
+                if debug: print("\ninitial (32, 16): ", path[p1])
                 while len(closed) < len(valid_points):
                     currNode = open.pop()
                     currState = currNode[0]
                     currPath = currNode[1]
+                    if debug:
+                        print("\nCurrent Node: ", currState)
+                        if (12, 4) in path[(32, 16)]: print("(32,16) --> (12, 4): ", path[(32, 16)][(12, 4)])
                     if currState not in closed:
                         successors = []
                         x, y = currState
@@ -250,6 +256,7 @@ class DummyAgent(CaptureAgent):
                             successors.append( ((x + 1, y), Directions.EAST) )
                         if not walls[x - 1][y]:
                             successors.append( ((x - 1, y), Directions.WEST) )
+                        if debug: print("Node {} not visited before, successor: {}\n".format(currState, successors))
                         if len(successors) > 0:
                             for each in successors:
                                 if currState not in path.keys(): path[currState] = {}
@@ -276,6 +283,8 @@ class DummyAgent(CaptureAgent):
                                 # print("path: ", path)
                         # print("len of {}: {},  len of valid: {}, open size: {}".format(p1, len(path[p1]), len(valid_points), len(open.list)))
                         closed.append(currState)
+                        import time
+                        if debug: time.sleep(0.1)
                 # print("{} keys: {}".format(p1, path[p1].keys()))
                 # print()
                 # print("Keys = valid points ? ", len(path[p1]) == len(valid_points))
