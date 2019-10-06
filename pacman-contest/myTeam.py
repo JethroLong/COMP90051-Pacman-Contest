@@ -101,6 +101,24 @@ class DummyAgent(CaptureAgent):
     
     # Risky Coordinates
     riskyCoordinates = []
+
+    def __init__(self, index):
+        super().__init__(index)
+
+        # Layout related
+        self.maze_dim = None
+        self.boarder_mid = None
+        self.boardWidth = None
+        self.boardHeight = None
+        self.pathDict = None
+
+        # game state variables
+        self.initialPosition = None
+        self.currentPosition = None
+        self.opponentIndices = None
+        self.searching = None
+        self.eatenFoods = None
+        self.walls = None
     
     # Goal Attempt History: Keep track of history of how many times this goal has failed to be reached.
     # IDEA, under consideration
@@ -182,7 +200,7 @@ class DummyAgent(CaptureAgent):
             if number_of_escape_path > 1:
                 return True
         return False
-    
+
     def registerInitialState(self, gameState):
         """
         This method handles the initial setup of the
@@ -292,7 +310,7 @@ class DummyAgent(CaptureAgent):
                                     1. Reduced search space
                                     2. Every one-step gives at most four
                                      > Two for adjacency
-                                     > Two for init and one another
+                                     > Two for init and one another 
                                 '''
                                 if each[0] not in closed:
                                     path[currState][each[0]] = [each[1]]
