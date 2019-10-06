@@ -1142,10 +1142,10 @@ class WaStarInvader(DummyAgent):
             if not capsulePrioritized:
                 for foodCoordinate in foodList:
                     # if self.isSafeCoordinate(foodCoordinate, updatedGameState):
-                    if len(self.areGhostsAround(updatedGameState, foodCoordinate, 7)) > 1:
-                        if self.isSafeCoordinate(foodCoordinate, updatedGameState):
-                            safeList.append(foodCoordinate)
-                    elif foodCoordinate in self.safeCoordinates:
+                    #if len(self.areGhostsAround(updatedGameState, foodCoordinate, 7)) > 1:
+                    #    if self.isSafeCoordinate(foodCoordinate, updatedGameState):
+                    #        safeList.append(foodCoordinate)
+                    if foodCoordinate in self.safeCoordinates:
                         safeList.append(foodCoordinate)
             for capsuleCoordinate in capsuleList:
                 safeList.append(capsuleCoordinate)
