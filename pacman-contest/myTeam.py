@@ -1425,6 +1425,8 @@ class WaStarDefender(DummyAgent):
         self.searching = None
         self.eatenFoods = None
         self.walls = None
+        self.eatDefender = None
+        self.my_zone = None
     
     def registerInitialState(self, gameState):
         """
@@ -1446,9 +1448,12 @@ class WaStarDefender(DummyAgent):
         # If the initial position is on the right side
         if self.initialPosition[0] > half_width:
             self.boarder_mid = (half_width, self.maze_dim[1] // 2)
+            self.my_zone = range(half_width, self.maze_dim[0])
         else:
             self.boarder_mid = (half_width - 1, self.maze_dim[1] // 2)
+            self.my_zone = range(half_width)
         self.myFood = self.getFoodYouAreDefending(gameState).asList()
+        self.eatDefender = False
         while self.walls[self.boarder_mid[0]][self.boarder_mid[1]]:
             self.boarder_mid = (self.boarder_mid[0], self.boarder_mid[1] + 1)
     
@@ -1531,13 +1536,48 @@ class WaStarDefender(DummyAgent):
             return self.findInvader(gameState, eatenFoods[0])
         else:
             self.myFood = currentFood
-            
+            if self.eatDefender:
+                return self.stealFood(gameState)
             defendFoodProblem = PositionSearchProblem(gameState, self.currentPosition, goal=self.boarder_mid)
             actions = wastarSearch(defendFoodProblem, manhattanHeuristic)
             if len(actions) > 0:
                 return actions[0]
             else:
                 return 'Stop'
+    
+    def stealFood(self, gameState):
+        foods = self.getFood(gameState).asList()
+        d = 100
+        temp = None
+        for food in foods:
+            ds = []
+            for i in range(self.maze_dim[1]):
+                if (self.boarder_mid[0], i) not in self.getWallList(gameState):
+                    t = self.getMazeDistance(food, (self.boarder_mid[0], i))
+                    ds.append(t)
+            if min(ds) < d:
+                d = min(ds)
+                temp = food
+        if d <= 5:
+            re = False
+            for opponent in self.opponentIndices:
+                # if in observable area
+                if gameState.getAgentPosition(opponent):
+                    avoid = gameState.getAgentPosition(opponent)
+                    re = True
+                    break
+            if re:
+                closestFoodProblem = AvoidProblem(gameState, self.currentPosition, opponent=avoid, goal=temp)
+            else:
+                closestFoodProblem = PositionSearchProblem(gameState, self.currentPosition, goal=temp)
+            actions = wastarSearch(closestFoodProblem, manhattanHeuristic)
+            if len(actions) > 0:
+                return actions[0]
+            else:
+                return 'Stop'
+        else:
+            self.eatDefender = False
+            return self.defend(gameState)
     
     def findInvader(self, gameState, foodEaten):
         defendFoodProblem = PositionSearchProblem(gameState, self.currentPosition, goal=foodEaten)
@@ -1574,10 +1614,10 @@ class WaStarDefender(DummyAgent):
             return 'Stop'
         '''
         # Pick the nearest invader to hunt
+        self.eatDefender = True
         target = sorted(invaders,
                         key=lambda pos: pow(pos[0] - self.currentPosition[0], 2) + pow(pos[1] - self.currentPosition[1],
                                                                                        2))[0]
-        
         defendFoodProblem = PositionSearchProblem(gameState, self.currentPosition, goal=target)
         actions = wastarSearch(defendFoodProblem, manhattanHeuristic)
         if len(actions) > 0:
