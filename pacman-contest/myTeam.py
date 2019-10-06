@@ -101,6 +101,24 @@ class DummyAgent(CaptureAgent):
     
     # Risky Coordinates
     riskyCoordinates = []
+
+    def __init__(self, index):
+        super().__init__(index)
+
+        # Layout related
+        self.maze_dim = None
+        self.boarder_mid = None
+        self.boardWidth = None
+        self.boardHeight = None
+        self.pathDict = None
+
+        # game state variables
+        self.initialPosition = None
+        self.currentPosition = None
+        self.opponentIndices = None
+        self.searching = None
+        self.eatenFoods = None
+        self.walls = None
     
     # Goal Attempt History: Keep track of history of how many times this goal has failed to be reached.
     # IDEA, under consideration
@@ -182,7 +200,7 @@ class DummyAgent(CaptureAgent):
             if number_of_escape_path > 1:
                 return True
         return False
-    
+
     def registerInitialState(self, gameState):
         """
         This method handles the initial setup of the
@@ -251,19 +269,24 @@ class DummyAgent(CaptureAgent):
         def getDistanceOnMaze(walls):
             valid_points = [(x, y) for x in range(self.maze_dim[0]) for y in range(self.maze_dim[1]) if
                             (x, y) not in walls.asList()]
-            open = util.Queue()
             path = {}
+            debug = False
             for p1 in valid_points:
+                open = util.Queue()
                 if p1 not in path.keys():
                     path[p1] = {p1: {}}
                 path[p1][p1] = []
                 init = (p1, [])
                 open.push(init)
                 closed = []
+                if debug: print("\ninitial (32, 16): ", path[p1])
                 while len(closed) < len(valid_points):
                     currNode = open.pop()
                     currState = currNode[0]
                     currPath = currNode[1]
+                    if debug:
+                        print("\nCurrent Node: ", currState)
+                        if (12, 4) in path[(32, 16)]: print("(32,16) --> (12, 4): ", path[(32, 16)][(12, 4)])
                     if currState not in closed:
                         successors = []
                         x, y = currState
@@ -275,6 +298,7 @@ class DummyAgent(CaptureAgent):
                             successors.append( ((x + 1, y), Directions.EAST) )
                         if not walls[x - 1][y]:
                             successors.append( ((x - 1, y), Directions.WEST) )
+                        if debug: print("Node {} not visited before, successor: {}\n".format(currState, successors))
                         if len(successors) > 0:
                             for each in successors:
                                 if currState not in path.keys(): path[currState] = {}
@@ -286,7 +310,7 @@ class DummyAgent(CaptureAgent):
                                     1. Reduced search space
                                     2. Every one-step gives at most four
                                      > Two for adjacency
-                                     > Two for init and one another
+                                     > Two for init and one another 
                                 '''
                                 if each[0] not in closed:
                                     path[currState][each[0]] = [each[1]]
@@ -301,6 +325,8 @@ class DummyAgent(CaptureAgent):
                                 # print("path: ", path)
                         # print("len of {}: {},  len of valid: {}, open size: {}".format(p1, len(path[p1]), len(valid_points), len(open.list)))
                         closed.append(currState)
+                        import time
+                        if debug: time.sleep(0.1)
                 # print("{} keys: {}".format(p1, path[p1].keys()))
                 # print()
                 # print("Keys = valid points ? ", len(path[p1]) == len(valid_points))
