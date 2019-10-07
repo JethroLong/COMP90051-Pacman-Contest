@@ -628,6 +628,35 @@ class WaStarInvader(DummyAgent):
             actions[0] = selectedAction
         return actions
     
+    def chooseLegalRandomPatrolAction(self, currentPosition, wallList, isRed, boardWidth):
+        actions = []
+        x, y = currentPosition[0], currentPosition[1]
+        if isRed:
+            if (x + 1, y) not in wallList and x + 1 < int(boardWidth / 2) and x + 1 >= int(boardWidth / 2) - 2:
+                actions.append("East")
+            if (x - 1, y) not in wallList and x - 1 < int(boardWidth / 2) and x - 1 >= int(boardWidth / 2) - 2:
+                actions.append("West")
+            if (x, y + 1) not in wallList and x < int(boardWidth / 2) and x >= int(boardWidth / 2) - 2:
+                actions.append("North")
+            if (x, y - 1) not in wallList and x < int(boardWidth / 2) and x >= int(boardWidth / 2) - 2:
+                actions.append("South")
+            if len(actions) == 0:
+                actions.append("Stop")
+        else:
+            if (x + 1, y) not in wallList and x + 1 >= int(boardWidth / 2) and x + 1 < int(boardWidth / 2) + 2:
+                actions.append("East")
+            if (x - 1, y) not in wallList and x - 1 >= int(boardWidth / 2) and x - 1 < int(boardWidth / 2) + 2:
+                actions.append("West")
+            if (x, y + 1) not in wallList and x >= int(boardWidth / 2) and x < int(boardWidth / 2) + 2:
+                actions.append("North")
+            if (x, y - 1) not in wallList and x >= int(boardWidth / 2) and x < int(boardWidth / 2) + 2:
+                actions.append("South")
+            if len(actions) == 0:
+                actions.append("Stop")
+        selectedAction = random.choice(actions)
+        actions[0] = selectedAction
+        return actions
+    
     def bestAvoidGhostAction(self, gameState, currentPosition, wallList, opponentList, capsuleList):
         # If capsule is reachable, then go for the capsule first.
         notNoneCapsuleList = []
@@ -1003,7 +1032,7 @@ class WaStarInvader(DummyAgent):
                                 foodList.append(element)
                         
             if len(foodList) == 0:
-                actions = self.chooseLegalRandomAction(currentPosition, wallList)
+                actions = self.chooseLegalRandomPatrolAction(currentPosition, wallList, self.red, boardWidth)
                 if self.debug_message: print("Empty food list, randomly choose legal action")
                 #self.updateHungrySteps(currentPosition, actions[0], foodList, capsuleList, opponentPacmanList, opponentList)
                 #print(str(self.hungrySteps))
