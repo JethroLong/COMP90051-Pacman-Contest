@@ -1519,30 +1519,46 @@ class WaStarDefender(DummyAgent):
     
     def stealFood(self, gameState):
         foods = self.getFood(gameState).asList()
-        d = 100
-        temp = None
+        d = 6
+        d_relax = 10
+        temp = []
+        temp2 = []
         for food in foods:
             ds = []
             for i in range(self.maze_dim[1]):
                 if (self.boarder_mid[0], i) not in self.getWallList(gameState):
                     t = self.getMazeDistance(food, (self.boarder_mid[0], i))
                     ds.append(t)
-            if min(ds) < d:
-                d = min(ds)
-                temp = food
-        if d <= 5:
+            minds = min(ds)
+            if minds < d:
+                temp.append((food, minds))
+            if minds < d_relax and minds >= d:
+                temp2.append((food, minds))
+        nearestFoodDistance = 100
+        absolutely_safe = True
+        for opponent in self.opponentIndices:
+            if gameState.getAgentPosition(opponent) and gameState.getAgentState(opponent).scaredTimer <= 10:
+                absolutely_safe = False
+                break
+        nearestFood = None
+        if absolutely_safe:
+            temp += temp2
+            for (food, minds) in temp:
+                if nearestFoodDistance > self.getMazeDistance(food, self.currentPosition):
+                    nearestFood = food
+                    nearestFoodDistance = self.getMazeDistance(food, self.currentPosition)
+        if nearestFood:
             re = False
             for opponent in self.opponentIndices:
                 # if in observable area
-                if gameState.getAgentPosition(opponent) and gameState.getAgentState(opponent).isPacman and gameState. \
+                if gameState.getAgentPosition(opponent) and (not gameState.getAgentState(opponent).isPacman) and gameState. \
                         getAgentState(opponent).scaredTimer <= 0:
                     avoid = gameState.getAgentPosition(opponent)
                     re = True
-                    break
             if re:
-                closestFoodProblem = AvoidProblem(gameState, self.currentPosition, opponent=avoid, goal=temp, myzone=self.my_zone)
+                closestFoodProblem = AvoidProblem(gameState, self.currentPosition, opponent=avoid, goal=nearestFood, myzone=self.my_zone)
             else:
-                closestFoodProblem = PositionSearchProblem(gameState, self.currentPosition, goal=temp)
+                closestFoodProblem = PositionSearchProblem(gameState, self.currentPosition, goal=nearestFood)
             actions = wastarSearch(closestFoodProblem, manhattanHeuristic)
             if len(actions) > 0:
                 return actions[0]
@@ -1599,6 +1615,8 @@ class WaStarDefender(DummyAgent):
         else:
             return 'Stop'
         '''
+        currentFood = self.getFoodYouAreDefending(gameState).asList()
+        self.myFood = currentFood
         # Pick the nearest invader to hunt
         self.eatDefender = True
         target = sorted(invaders,
@@ -1663,10 +1681,6 @@ def wastarSearch(problem, heuristic):
         currState = currNode[0]
         currPath = currNode[1]
         currPathCost = currNode[2]
-        
-        expandedThreshold = 360
-        if problem._expanded == expandedThreshold:
-            return currPath[1:]
         
         if problem.isGoalState(currState):
             return currPath[1:]
@@ -1870,8 +1884,6 @@ class FleeProblem(PositionSearchProblem):
 
 
 class AvoidProblem(FleeProblem):
-    myzone = []
-    
     def __init__(self, gameState, startState, opponent, costFn=lambda x: 1, goal=(1, 1), start=None, warn=True,
                  visualize=False, myzone=[]):
         """
@@ -1884,27 +1896,22 @@ class AvoidProblem(FleeProblem):
         self.walls = gameState.getWalls()
         (x, y) = opponent
         self.walls[x][y] = True
-        self.walls[x + 1][y] = True
-        self.wall_filter(x + 1, y)
-        self.walls[x - 1][y] = True
-        self.wall_filter(x - 1, y)
-        self.walls[x][y + 1] = True
-        self.wall_filter(x, y + 1)
-        self.walls[x][y - 1] = True
-        self.wall_filter(x, y - 1)
+        if x + 1 not in myzone:
+            self.walls[x + 1][y] = True
+        if x - 1 not in myzone:
+            self.walls[x - 1][y] = True
+        if x not in myzone:
+            self.walls[x][y + 1] = True
+            self.walls[x][y - 1] = True
+        
         self.startState = startState
         if start != None: self.startState = start
         self.goal = goal
         self.costFn = costFn
         self.visualize = visualize
-        self.myzone = myzone
         
         # For display purposes
         self._visited, self._visitedlist, self._expanded = {}, [], 0  # DO NOT CHANGE
-    
-    def wall_filter(self, x, y):
-        if x in self.myzone:
-            self.walls[x][y] = False
     
     def isGoalState(self, state):
         isGoal = state == self.goal
