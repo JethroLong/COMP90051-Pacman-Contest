@@ -1566,21 +1566,20 @@ class WaStarDefender(DummyAgent):
             self.myFood = currentFood
             if self.eatDefender:
                 return self.stealFood(gameState)
-            if gameState.getAgentState(self.index).isPacman:
-                re = False
-                for opponent in self.opponentIndices:
-                    # if in observable area,
-                    if gameState.getAgentPosition(opponent) and (not gameState.getAgentState(opponent).isPacman) and \
-                            gameState.getAgentState(opponent).scaredTimer <= 0:
-                        avoid = gameState.getAgentPosition(opponent)
-                        re = True
-                        break
-                if re:
-                    defendFoodProblem = AvoidProblem(gameState, self.currentPosition, opponent=avoid, goal=self.boarder_mid)
-                else:
-                    defendFoodProblem = PositionSearchProblem(gameState, self.currentPosition, goal=self.boarder_mid)
+            
+            re = False
+            for opponent in self.opponentIndices:
+                # if in observable area,
+                if gameState.getAgentPosition(opponent) and (not gameState.getAgentState(opponent).isPacman) and \
+                        gameState.getAgentState(opponent).scaredTimer <= 0:
+                    avoid = gameState.getAgentPosition(opponent)
+                    re = True
+                    break
+            if re:
+                defendFoodProblem = AvoidProblem(gameState, self.currentPosition, opponent=avoid, goal=self.boarder_mid, myzone=self.my_zone)
             else:
                 defendFoodProblem = PositionSearchProblem(gameState, self.currentPosition, goal=self.boarder_mid)
+            
             actions = wastarSearch(defendFoodProblem, manhattanHeuristic)
             if len(actions) > 0:
                 return actions[0]
@@ -1610,7 +1609,7 @@ class WaStarDefender(DummyAgent):
                     re = True
                     break
             if re:
-                closestFoodProblem = AvoidProblem(gameState, self.currentPosition, opponent=avoid, goal=temp)
+                closestFoodProblem = AvoidProblem(gameState, self.currentPosition, opponent=avoid, goal=temp, myzone=self.my_zone)
             else:
                 closestFoodProblem = PositionSearchProblem(gameState, self.currentPosition, goal=temp)
             actions = wastarSearch(closestFoodProblem, manhattanHeuristic)
@@ -1624,21 +1623,19 @@ class WaStarDefender(DummyAgent):
             return self.defend(gameState)
     
     def findInvader(self, gameState, foodEaten):
-        if gameState.getAgentState(self.index).isPacman:
-            re = False
-            for opponent in self.opponentIndices:
-                # if in observable area,
-                if gameState.getAgentPosition(opponent) and (not gameState.getAgentState(opponent).isPacman) and \
-                        gameState.getAgentState(opponent).scaredTimer <= 0:
-                    avoid = gameState.getAgentPosition(opponent)
-                    re = True
-                    break
-            if re:
-                closestFoodProblem = AvoidProblem(gameState, self.currentPosition, opponent=avoid, goal=foodEaten)
-            else:
-                closestFoodProblem = PositionSearchProblem(gameState, self.currentPosition, goal=foodEaten)
+        re = False
+        for opponent in self.opponentIndices:
+            # if in observable area,
+            if gameState.getAgentPosition(opponent) and (not gameState.getAgentState(opponent).isPacman) and \
+                    gameState.getAgentState(opponent).scaredTimer <= 0:
+                avoid = gameState.getAgentPosition(opponent)
+                re = True
+                break
+        if re:
+            closestFoodProblem = AvoidProblem(gameState, self.currentPosition, opponent=avoid, goal=foodEaten, myzone=self.my_zone)
         else:
             closestFoodProblem = PositionSearchProblem(gameState, self.currentPosition, goal=foodEaten)
+        
         actions = wastarSearch(closestFoodProblem, manhattanHeuristic)
         if len(actions) > 0:
             return actions[0]
@@ -1676,21 +1673,20 @@ class WaStarDefender(DummyAgent):
         target = sorted(invaders,
                         key=lambda pos: pow(pos[0] - self.currentPosition[0], 2) + pow(pos[1] - self.currentPosition[1],
                                                                                        2))[0]
-        if gameState.getAgentState(self.index).isPacman:
-            re = False
-            for opponent in self.opponentIndices:
-                # if in observable area,
-                if gameState.getAgentPosition(opponent) and (not gameState.getAgentState(opponent).isPacman) and \
-                        gameState.getAgentState(opponent).scaredTimer <= 0:
-                    avoid = gameState.getAgentPosition(opponent)
-                    re = True
-                    break
-            if re:
-                defendFoodProblem = AvoidProblem(gameState, self.currentPosition, opponent=avoid, goal=target)
-            else:
-                defendFoodProblem = PositionSearchProblem(gameState, self.currentPosition, goal=target)
+        
+        re = False
+        for opponent in self.opponentIndices:
+            # if in observable area,
+            if gameState.getAgentPosition(opponent) and (not gameState.getAgentState(opponent).isPacman) and \
+                    gameState.getAgentState(opponent).scaredTimer <= 0:
+                avoid = gameState.getAgentPosition(opponent)
+                re = True
+                break
+        if re:
+            defendFoodProblem = AvoidProblem(gameState, self.currentPosition, opponent=avoid, goal=target, myzone=self.my_zone)
         else:
             defendFoodProblem = PositionSearchProblem(gameState, self.currentPosition, goal=target)
+        
         actions = wastarSearch(defendFoodProblem, manhattanHeuristic)
         if len(actions) > 0:
             return actions[0]
@@ -1936,10 +1932,13 @@ class FleeProblem(PositionSearchProblem):
     def isGoalState(self, state):
         isGoal = state in self.goal
         return isGoal
-    
+
+
 class AvoidProblem(FleeProblem):
+    myzone = []
+    
     def __init__(self, gameState, startState, opponent, costFn=lambda x: 1, goal=(1, 1), start=None, warn=True,
-                 visualize=False):
+                 visualize=False, myzone=[]):
         """
         Stores the start and goal.
 
@@ -1951,18 +1950,27 @@ class AvoidProblem(FleeProblem):
         (x, y) = opponent
         self.walls[x][y] = True
         self.walls[x + 1][y] = True
+        self.wall_filter(x + 1, y)
         self.walls[x - 1][y] = True
+        self.wall_filter(x - 1, y)
         self.walls[x][y + 1] = True
+        self.wall_filter(x, y + 1)
         self.walls[x][y - 1] = True
+        self.wall_filter(x, y - 1)
         self.startState = startState
         if start != None: self.startState = start
         self.goal = goal
         self.costFn = costFn
         self.visualize = visualize
-
+        self.myzone = myzone
+        
         # For display purposes
         self._visited, self._visitedlist, self._expanded = {}, [], 0  # DO NOT CHANGE
-
+    
+    def wall_filter(self, x, y):
+        if x in self.myzone:
+            self.walls[x][y] = False
+    
     def isGoalState(self, state):
         isGoal = state == self.goal
         return isGoal
