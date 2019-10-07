@@ -445,6 +445,18 @@ class DummyAgent(CaptureAgent):
                 farthestObj = candidateObject
                 farthestDistance = distance
         return farthestObj, farthestDistance
+    
+    def bestPortalY(self, wallList, isRed, boardWidth, boardHeight):
+        candidates = []
+        if isRed:
+            for y in range(1, boardHeight):
+                if (int(boardWidth / 2) - 1, y) not in wallList:
+                    candidates.append((int(boardWidth / 2) - 1, y))
+        else:
+            for y in range(1, boardHeight):
+                if (int(boardWidth / 2), y) not in wallList:
+                    candidates.append((int(boardWidth / 2), y))
+        return candidates[int(len(candidates) / 2)]
 
     def breadthFirstSearch(self, problem, avoidCoordinate, isRed, boardWidth, wallList, opponentList):
         
@@ -1032,11 +1044,14 @@ class WaStarInvader(DummyAgent):
                                 foodList.append(element)
                         
             if len(foodList) == 0:
-                actions = self.chooseLegalRandomPatrolAction(currentPosition, wallList, self.red, boardWidth)
-                if self.debug_message: print("Empty food list, randomly choose legal action")
-                #self.updateHungrySteps(currentPosition, actions[0], foodList, capsuleList, opponentPacmanList, opponentList)
-                #print(str(self.hungrySteps))
-                return actions[0]
+                if (self.red and currentPosition[0] >= int(boardWidth / 2) - 2) or (not self.red and currentPosition[0] < int(boardWidth / 2) + 2):
+                    actions = self.chooseLegalRandomPatrolAction(currentPosition, wallList, self.red, boardWidth)
+                    if self.debug_message: print("Empty food list, randomly choose legal action")
+                    #self.updateHungrySteps(currentPosition, actions[0], foodList, capsuleList, opponentPacmanList, opponentList)
+                    #print(str(self.hungrySteps))
+                    return actions[0]
+                else:
+                    foodList.append(self.bestPortalY(wallList, self.red, boardWidth, boardHeight))
             
             closestFood, distance = self.closestObject(foodList, updatedGameState)
             if self.debug_message: print("Goal: " + str(closestFood))
@@ -1167,8 +1182,11 @@ class WaStarInvader(DummyAgent):
             if not capsulePrioritized:
                 score = self.getScore(updatedGameState)
                 foodCarrying = updatedGameState.getAgentState(self.index).numCarrying
-                foodCarryingReturnThreshold = 6
-                if score < 18:
+                if len(opponentList) == 2:
+                    foodCarryingReturnThreshold = 6
+                else:
+                    foodCarryingReturnThreshold = 7
+                if score < 3 * foodCarryingReturnThreshold:
                     if foodCarrying >= foodCarryingReturnThreshold:
                         if self.debug_message: print("Mode Changes: invader retreat mode")
                         actions = self.retreat(updatedGameState)
