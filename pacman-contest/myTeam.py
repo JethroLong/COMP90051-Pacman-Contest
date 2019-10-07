@@ -994,6 +994,14 @@ class WaStarInvader(DummyAgent):
                     if element not in foodList:
                         foodList.append(element)
                         
+            if updatedGameState.data.timeleft <= 160:
+                foodList = []
+                if myScaredTime == 0:
+                    if len(opponentPacmanList) != 0:
+                        for element in opponentPacmanList:
+                            if element not in foodList:
+                                foodList.append(element)
+                        
             if len(foodList) == 0:
                 actions = self.chooseLegalRandomAction(currentPosition, wallList)
                 if self.debug_message: print("Empty food list, randomly choose legal action")
@@ -1347,7 +1355,7 @@ class WaStarInvader(DummyAgent):
         currentPosition = gameState.getAgentPosition(self.index)
         timeleft = gameState.data.timeleft
         
-        if int(timeleft / 4) <= 40 and ((self.red and currentPosition[0] >= int(boardWidth / 2)) or (not self.red and currentPosition[0] < int(boardWidth / 2))):
+        if timeleft <= 160 and ((self.red and currentPosition[0] >= int(boardWidth / 2)) or (not self.red and currentPosition[0] < int(boardWidth / 2))):
             self.mode = "invader retreat mode"
             return
         if len(self.getFood(gameState).asList()) <= 2:
