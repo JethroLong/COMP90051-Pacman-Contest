@@ -344,9 +344,10 @@ class DummyAgent(CaptureAgent):
                 opponentPacmanList.append(opponentPacmanPosition)
         return opponentPacmanList
     
+    # Check whether there are ghosts around me within certain distance
     def areGhostsAround(self, gameState, testCoordinate, inclusiveRangeThreshold):
         surroundingOpponentList = []
-        considerGhostAsSurroundingThreshold = sys.maxsize # can be sys.maxsize # TO CHECK
+        considerGhostAsSurroundingThreshold = sys.maxsize
         for opponentIndex in self.getOpponents(gameState):
             opponentPosition = gameState.getAgentPosition(opponentIndex)
             if opponentPosition is not None:
@@ -535,6 +536,7 @@ The technique we used here is Heuristic Search. We applied A* algorithm, with pa
 
 class WaStarInvader(DummyAgent):
     
+    # When heuristic search finds no path, legal random action may be used.
     def chooseLegalRandomAction(self, currentPosition, wallList):
         actions = []
         x, y = currentPosition[0], currentPosition[1]
@@ -582,6 +584,7 @@ class WaStarInvader(DummyAgent):
         actions[0] = selectedAction
         return actions
     
+    # When heuristic search finds no path, this function will be used.
     def bestAvoidGhostAction(self, gameState, currentPosition, wallList, opponentList, capsuleList):
         # If capsule is reachable, then go for the capsule first.
         notNoneCapsuleList = []
@@ -638,28 +641,28 @@ class WaStarInvader(DummyAgent):
                 tempDistance = 0
                 for opponent in opponentList:
                     tempDistance += self.getMazeDistance((x + 1, y), opponent)
-                distanceStorage["East"] = tempDistance
+                distanceStorage[Directions.EAST] = tempDistance
                 if tempDistance > distanceToGhost:
                     distanceToGhost = tempDistance
             if (x - 1, y) not in wallList:
                 tempDistance = 0
                 for opponent in opponentList:
                     tempDistance += self.getMazeDistance((x - 1, y), opponent)
-                distanceStorage["West"] = tempDistance
+                distanceStorage[Directions.WEST] = tempDistance
                 if tempDistance > distanceToGhost:
                     distanceToGhost = tempDistance
             if (x, y + 1) not in wallList:
                 tempDistance = 0
                 for opponent in opponentList:
                     tempDistance += self.getMazeDistance((x, y + 1), opponent)
-                distanceStorage["North"] = tempDistance
+                distanceStorage[Directions.NORTH] = tempDistance
                 if tempDistance > distanceToGhost:
                     distanceToGhost = tempDistance
             if (x, y - 1) not in wallList:
                 tempDistance = 0
                 for opponent in opponentList:
                     tempDistance += self.getMazeDistance((x, y - 1), opponent)
-                distanceStorage["South"] = tempDistance
+                distanceStorage[Directions.SOUTH] = tempDistance
                 if tempDistance > distanceToGhost:
                     distanceToGhost = tempDistance
             for action in distanceStorage.keys():
@@ -669,93 +672,37 @@ class WaStarInvader(DummyAgent):
                 return [self.chooseLegalRandomAction(currentPosition, wallList)[0]]
             return wisestAction
         else:
-            if self.debug_message: print("No Surrounding Ghosts, this function shouldnt be used in this case. ")
             return [self.chooseLegalRandomAction(currentPosition, wallList)[0]]
-    
-    def isSafeCoordinate(self, coordinate, gameState):
-        """
-        Decide whether the given coordinate is safe or not,
-        i.e. whether there exists at least two ways back home.
-        """
-        wallList = gameState.getWalls().asList()
-        if coordinate in wallList:
-            return False
-        """
-        opponentList = self.getOpponentList(gameState)
-        closestOpponentDistance = sys.maxsize
-        for opponent in opponentList:
-            if opponent is not None:
-                tempDistance = self.getMazeDistance(opponent, coordinate)
-                if tempDistance < closestOpponentDistance:
-                    closestOpponentDistance = tempDistance
-        if self.isWallCornerCoordinate(coordinate, wallList) and closestOpponentDistance >= 3:
-            return True
-        """
-        capsuleList = self.getCapsuleList(gameState)
-        for capsule in capsuleList:
-            if capsule is not None and self.getMazeDistance(coordinate, capsule) <= 2:  # Only applicable for maze distance
-                return True
-        x, y = coordinate[0], coordinate[1]
-        legalAction = self.getLegalActionOfPosition(coordinate, gameState)
-        if len(legalAction) <= 1:
-            return False
-        if len(legalAction) == 2 and "Stop" in legalAction:
-            return False
-        nonStopLegalAction = []
-        for action in legalAction:
-            if action != "Stop":
-                nonStopLegalAction.append(action)
-        newStartingPoint = []
-        for action in nonStopLegalAction:
-            if action == "East":
-                newStartingPoint.append((x + 1, y))
-            elif action == "West":
-                newStartingPoint.append((x - 1, y))
-            elif action == "North":
-                newStartingPoint.append((x, y + 1))
-            elif action == "South":
-                newStartingPoint.append((x, y - 1))
-        number_of_escape_path = 0
-        for startingPoint in newStartingPoint:
-            dfsProblem = PositionSearchProblem(gameState, startingPoint)
-            boardWidth, boardHeight = self.getWidthandHeight(gameState)
-            path = self.depthFirstSearch(dfsProblem, coordinate, self.red, boardWidth, self.getWallList(gameState), self.getOpponentList(gameState))
-            if len(path) != 0:
-                number_of_escape_path += 1
-            if number_of_escape_path > 1:
-                return True
-        return False
-    
-    def isWallCornerCoordinate(self, coordinate, wallList):
-        pass
         
     # NOTE: This function is for testing, currently not used.
+    # Maintain the hungry steps
     def updateHungrySteps(self, currentPosition, nextAction, foodList, capsuleList, opponentPacmanList, opponentList):
         x, y = currentPosition[0], currentPosition[1]
-        if nextAction == "North":
+        if nextAction == Directions.NORTH:
             if (x, y + 1) in foodList or (x, y + 1) in capsuleList or (x, y + 1) in opponentPacmanList or (x, y + 1) in opponentList:
                 self.hungrySteps = 0
             else:
                 self.hungrySteps += 1
-        if nextAction == "South":
+        if nextAction == Directions.SOUTH:
             if (x, y - 1) in foodList or (x, y - 1) in capsuleList or (x, y - 1) in opponentPacmanList or (x, y - 1) in opponentList:
                 self.hungrySteps = 0
             else:
                 self.hungrySteps += 1
-        if nextAction == "West":
+        if nextAction == Directions.WEST:
             if (x - 1, y) in foodList or (x - 1, y) in capsuleList or (x - 1, y) in opponentPacmanList or (x - 1, y) in opponentList:
                 self.hungrySteps = 0
             else:
                 self.hungrySteps += 1
-        if nextAction == "East":
+        if nextAction == Directions.EAST:
             if (x + 1, y) in foodList or (x + 1, y) in capsuleList or (x + 1, y) in opponentPacmanList or (x + 1, y) in opponentList:
                 self.hungrySteps = 0
             else:
                 self.hungrySteps += 1
-        if nextAction == "Stop":
+        if nextAction == Directions.STOP:
             self.hungrySteps += 1
         return
     
+    # Heuristic Search Retreat Mode, used for agent to retreat back home using heuristic search algorithm.
     def retreat(self, gameState):
         width, height = self.getWidthandHeight(gameState)
         currentPosition = gameState.getAgentPosition(self.index)
@@ -774,13 +721,9 @@ class WaStarInvader(DummyAgent):
         if self.debug_message: print("Goal: " + str(closestHome))
         goHomeProblem = PositionSearchProblem(gameState, currentPosition, goal = closestHome)
         actions = wastarSearch(goHomeProblem, manhattanHeuristic)
-        # self.updateScore(gameState)
         if self.debug_message: print("Goal Type: Closest Home")
         if len(actions) == 0:
-            # actions.append("Stop")
-            # Don't Stop, stop is the most stupidest move
             if self.debug_message: print("Empty Action List, Randomly Select Legal Actions")
-            # actions = self.chooseLegalRandomAction(currentPosition, wallList)
             actions = self.bestAvoidGhostAction(gameState, currentPosition, wallList, self.getOpponentList(gameState), self.getCapsuleList(gameState))
         if self.debug_message: print("Action: " + actions[0])
         if self.debug_message: print("===============================")
