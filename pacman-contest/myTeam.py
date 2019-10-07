@@ -971,7 +971,7 @@ class WaStarInvader(DummyAgent):
             if abs(closestFood[0] - currentPosition[0]) > 10:
                 actions = self.pathDict[currentPosition][closestFood].copy()
                 allowedActions = self.getLegalActionOfPosition(currentPosition, updatedGameState)
-                if actions[0] == "Stop":
+                if actions[0] == Directions.STOP:
                     actions[0] = actions[1]
                 if actions[0] not in allowedActions:
                     selectedAction = random.choice(allowedActions)
@@ -1186,7 +1186,7 @@ class WaStarInvader(DummyAgent):
             for element in capsuleList:
                 if element not in goodList and element not in wallList:
                     goodList.append(element)
-            scaredTimerCountingDownThreshold = 7 # More conservative
+            scaredTimerCountingDownThreshold = 8
             scaredOpponentGhostDistance = 1
             for element in opponentList:
                 for key in opponentDict:
@@ -1276,17 +1276,17 @@ class WaStarInvader(DummyAgent):
                 actions = []
                 x, y = currentPosition[0], currentPosition[1]
                 if (x - 1, y) not in wallList:
-                    actions.append("West")
+                    actions.append(Directions.WEST)
                 if (x + 1, y) not in wallList:
-                    actions.append("East")
+                    actions.append(Directions.EAST)
                 if (x, y - 1) not in wallList:
-                    actions.append("South")
+                    actions.append(Directions.SOUTH)
                 if (x, y + 1) not in wallList:
-                    actions.append("North")
+                    actions.append(Directions.NORTH)
                 if len(actions) != 0:
                     actions[0] = random.choice(actions)
                 else:
-                    actions.append("Stop")
+                    actions.append(Directions.STOP)
             if self.debug_message: print("Action: " + actions[0])
             if self.debug_message: print("===============================")
             if self.debug_message: print()
@@ -1331,7 +1331,7 @@ class WaStarInvader(DummyAgent):
             if gameState.data._capsuleEaten is not None:
                 self.mode = "invader power mode"
                 return
-            scaredTimerCountingDownThreshold = 7 # IDEA: maybe 5, which will make the invader more conservative.
+            scaredTimerCountingDownThreshold = 8
             if gameState.data._capsuleEaten is None and scaredTime >= scaredTimerCountingDownThreshold:
                 self.mode = "invader power mode"
                 return
