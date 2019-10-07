@@ -1682,6 +1682,10 @@ def wastarSearch(problem, heuristic):
         currPath = currNode[1]
         currPathCost = currNode[2]
         
+        expandedThreshold = 360
+        if problem._expanded == expandedThreshold:
+            return currPath[1:]
+        
         if problem.isGoalState(currState):
             return currPath[1:]
         else:
