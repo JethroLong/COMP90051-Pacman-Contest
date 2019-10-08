@@ -1306,6 +1306,7 @@ class WaStarDefender(DummyAgent):
         self.walls = None
         self.eatDefender = None
         self.my_zone = None
+        self.potentialInvaders = None
     
     def registerInitialState(self, gameState):
         """
@@ -1327,15 +1328,19 @@ class WaStarDefender(DummyAgent):
         # If the initial position is on the right side
         if self.initialPosition[0] > half_width:
             self.boarder_mid = (half_width, self.maze_dim[1] // 2)
+            self.opponentborder = half_width - 1
             self.my_zone = range(half_width, self.maze_dim[0])
         else:
             self.boarder_mid = (half_width - 1, self.maze_dim[1] // 2)
+            self.opponentborder = half_width
             self.my_zone = range(half_width)
         while self.walls[self.boarder_mid[0]][self.boarder_mid[1]]:
             self.boarder_mid = (self.boarder_mid[0], self.boarder_mid[1] + 1)
         
         self.eatDefender = False
         self.myFood = self.getFoodYouAreDefending(gameState).asList()
+        self.potentialInvaders = []
+        self.boardHeight = gameState.data.layout.height
     
     def chooseAction(self, gameState):
         """
@@ -1376,6 +1381,8 @@ class WaStarDefender(DummyAgent):
                 # if the opponent invades
                 if gameState.getAgentState(opponent).isPacman:
                     invaders.append(gameState.getAgentPosition(opponent))
+                    if opponent not in self.potentialInvaders:
+                        self.potentialInvaders.append(opponent)
         return invaders
     
     def scaredAction(self, gameState, invaders):
@@ -1416,9 +1423,17 @@ class WaStarDefender(DummyAgent):
             return self.findInvader(gameState, eatenFoods[0])
         else:
             self.myFood = currentFood
+            invaders = []
+            for opponent in self.potentialInvaders:
+                # if in observable area
+                if gameState.getAgentPosition(opponent):
+                    # if the opponent invades
+                    if not gameState.getAgentState(opponent).isPacman:
+                        invaders.append(gameState.getAgentPosition(opponent))
+            if len(invaders) > 0 and (not gameState.getAgentState(self.index).isPacman):
+                return self.track(invaders[0], gameState)
             if self.eatDefender:
                 return self.stealFood(gameState)
-            
             re = False
             for opponent in self.opponentIndices:
                 # if in observable area,
@@ -1440,6 +1455,16 @@ class WaStarDefender(DummyAgent):
                 return actions[0]
             else:
                 return 'Stop'
+    
+    def track(self, invader, gameState):
+        trackProblem = TrackProblem(gameState, self.currentPosition, opponentborder=self.opponentborder, goal=invader, self_border=self.boarder_mid[0], height=self.boardHeight)
+        actions = wastarSearch(trackProblem, manhattanHeuristic)
+        # print("mode: stealFood")
+        # print(self.currentPosition)
+        if len(actions) > 0:
+            return actions[0]
+        else:
+            return 'Stop'
     
     def stealFood(self, gameState):
         foods = self.getFood(gameState).asList()
@@ -1859,3 +1884,27 @@ class AvoidProblem(FleeProblem):
     def isGoalState(self, state):
         isGoal = state == self.goal
         return isGoal
+
+class TrackProblem(PositionSearchProblem):
+    def __init__(self, gameState, startState, costFn=lambda x: 1, goal=(1, 1), opponentborder = 15, self_border = 16,height = 0,start=None, warn=True,
+                 visualize=False):
+        """
+        Stores the start and goal.
+
+        gameState: A GameState object (pacman.py)
+        costFn: A function from a search state (tuple) to a non-negative number
+        goal: A position in the gameState
+        """
+        self.walls = gameState.getWalls()
+        for i in range(height):
+            self.walls[opponentborder][i] = True
+        self.startState = startState
+        if start != None: self.startState = start
+        self.goal = (self_border, goal[1])
+        while self.walls[self.goal[0]][self.goal[1]]:
+            self.goal = (self.goal[0], self.goal[1] + 1)
+        self.costFn = costFn
+        self.visualize = visualize
+
+        # For display purposes
+        self._visited, self._visitedlist, self._expanded = {}, [], 0  # DO NOT CHANGE
