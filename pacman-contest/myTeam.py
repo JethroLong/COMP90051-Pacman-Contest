@@ -10,6 +10,19 @@
 # (denero@cs.berkeley.edu) and Dan Klein (klein@cs.berkeley.edu).
 # Student side autograding was added by Brad Miller, Nick Hay, and
 # Pieter Abbeel (pabbeel@cs.berkeley.edu).
+
+################################
+# Agent Technique Introduction #
+################################
+
+"""
+    HEURISTIC SEARCH PACMAN AGENTS
+    
+    The technique we used in this implementation is Heuristic Search
+    A* algorithm is used, with different goal and different heuristic under different circumstances
+    
+"""
+
 import sys
 
 from captureAgents import CaptureAgent
@@ -106,14 +119,11 @@ class DummyAgent(CaptureAgent):
     # Definition: Coordinates that are not classified as safe
     riskyCoordinates = []
     
-    # Goal Attempt History: Keep track of history of how many times this goal has failed to be reached.
-    # IDEA, under consideration
-    
-    # Steps from the last food / capsule / ghost eaten
+    # Steps from the last food / capsule / ghost eaten (Used for testing only. )
     hungrySteps = 0
     
     # Before submitting the code, turn this to False to hide debug messages
-    debug_message = True # Turn to False before submission # TODO
+    debug_message = True
 
     def __init__(self, index):
         super().__init__(index)
@@ -172,14 +182,15 @@ class DummyAgent(CaptureAgent):
                 newStartingPoint.append((x, y + 1))
             elif action == Directions.SOUTH:
                 newStartingPoint.append((x, y - 1))
-        number_of_escape_path = 0
+        
+        numberOfEscapePath = 0
         for startingPoint in newStartingPoint:
             dfsProblem = PositionSearchProblem(gameState, startingPoint)
             boardWidth, boardHeight = self.getWidthandHeight(gameState)
             path = self.depthFirstSearch(dfsProblem, coordinate, self.red, boardWidth, self.getWallList(gameState), self.getOpponentList(gameState))
             if len(path) != 0:
-                number_of_escape_path += 1
-            if number_of_escape_path > 1:
+                numberOfEscapePath += 1
+            if numberOfEscapePath > 1:
                 return True
         return False
     
