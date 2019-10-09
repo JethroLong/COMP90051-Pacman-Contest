@@ -241,6 +241,10 @@ class DummyAgent(CaptureAgent):
         self.pathDict = self.scanMaze()
         
         if self.debug_message: print("==========Pre-computation Done==========")
+        
+    ####################
+    # Helper Functions #
+    ####################
 
     def scanMaze(self):
         """
@@ -355,8 +359,10 @@ class DummyAgent(CaptureAgent):
                 opponentPacmanList.append(opponentPacmanPosition)
         return opponentPacmanList
     
-    # Check whether there are ghosts around me within certain distance
     def areGhostsAround(self, gameState, testCoordinate, inclusiveRangeThreshold):
+        """
+        Check whether there are ghosts around me within certain distance
+        """
         surroundingOpponentList = []
         considerGhostAsSurroundingThreshold = sys.maxsize
         for opponentIndex in self.getOpponents(gameState):
@@ -444,11 +450,12 @@ class DummyAgent(CaptureAgent):
         return candidates[int(len(candidates) / 2)]
 
     def breadthFirstSearch(self, problem, avoidCoordinate, isRed, boardWidth, wallList, opponentList):
-        
+        """
+        For testing only, currently not used.
+        """
         for element in opponentList:
             if element not in wallList:
                 wallList.append(element)
-        
         open = util.Queue()
         init = (problem.getStartState(), [Directions.STOP], 0)
         open.push(init)
@@ -472,22 +479,21 @@ class DummyAgent(CaptureAgent):
         return []
     
     def depthFirstSearch(self, problem, avoidCoordinate, isRed, boardWidth, wallList, opponentList):
-        
+        """
+        Used to define safeCoordinates
+        """
         for element in opponentList:
             if element not in wallList:
                 wallList.append(element)
-        
         open = util.Stack()
         initState = (problem.getStartState(), [Directions.STOP], 0)
         open.push(initState)
         closed = []
-    
         while not open.isEmpty():
             currState = open.pop()
             currPos = currState[0]
             currPath = currState[1]
             currCost = currState[2]
-        
             if (isRed and currPos[0] < int(boardWidth / 2)) or (not isRed and currPos[0] >= int(boardWidth / 2)):
                 return currPath[1:]
             else:
@@ -502,24 +508,20 @@ class DummyAgent(CaptureAgent):
         return []
 
     def depthFirstSearchSafeDetector(self, problem, currentCoordinate, wallList, opponentList):
-    
         for element in opponentList:
             if element not in wallList:
                 wallList.append(element)
         if currentCoordinate not in wallList:
             wallList.append(currentCoordinate)
-    
         open = util.Stack()
         initState = (problem.getStartState(), [Directions.STOP], 0)
         open.push(initState)
         closed = []
-    
         while not open.isEmpty():
             currState = open.pop()
             currPos = currState[0]
             currPath = currState[1]
             currCost = currState[2]
-        
             if currPos in self.safeCoordinates:
                 return currPath[1:]
             else:
@@ -536,19 +538,21 @@ class DummyAgent(CaptureAgent):
 
 
 
-######################################
-#            WA* Agents
-######################################
+###########################
+# Heuristic Search Agents #
+###########################
 
 '''
-WA* Agent
-The technique we used here is Heuristic Search. We applied A* algorithm, with pacman specific goal and heuristics.
+    Heuristic Search A* Agents
+    The technique we used here is Heuristic Search. We applied A* algorithm, with pacman specific goal and heuristics.
 '''
 
 class WaStarInvader(DummyAgent):
     
-    # When heuristic search finds no path, legal random action may be used.
     def chooseLegalRandomAction(self, currentPosition, wallList):
+        """
+        When heuristic search finds no path, legal random action may be used.
+        """
         actions = []
         x, y = currentPosition[0], currentPosition[1]
         if (x + 1, y) not in wallList:
