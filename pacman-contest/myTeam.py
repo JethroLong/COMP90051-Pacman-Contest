@@ -552,6 +552,7 @@ class WaStarInvader(DummyAgent):
     def chooseLegalRandomAction(self, currentPosition, wallList):
         """
         When heuristic search finds no path, legal random action may be used.
+        This function is used very infrequently, under normal situation heuristic search is able to find a path.
         """
         actions = []
         x, y = currentPosition[0], currentPosition[1]
@@ -599,9 +600,11 @@ class WaStarInvader(DummyAgent):
         actions[0] = selectedAction
         return actions
     
-    # When heuristic search finds no path, this function will be used.
     def bestAvoidGhostAction(self, gameState, currentPosition, wallList, opponentList, capsuleList):
-        # If capsule is reachable, then go for the capsule first.
+        """
+        When heuristic search finds no path, this function may be used.
+        This function is used very infrequently, under normal situation heuristic search is able to find a path.
+        """
         notNoneCapsuleList = []
         for capsule in capsuleList:
             if capsule is not None:
@@ -613,7 +616,6 @@ class WaStarInvader(DummyAgent):
                 if len(actions) != 0:
                     return actions
         
-        # if any direction can lead to safe coordinate, then choose it.
         if len(opponentList) != 0:
             x, y = currentPosition[0], currentPosition[1]
             newStartingPoint = []
@@ -634,19 +636,18 @@ class WaStarInvader(DummyAgent):
                     path = self.depthFirstSearchSafeDetector(dfsProblem, currentPosition, self.getWallList(gameState), self.getOpponentList(gameState))
                 if len(path) != 0:
                     if startingPoint == (x + 1, y):
-                        safeLeadingDirection.append("East")
+                        safeLeadingDirection.append(Directions.EAST)
                     elif startingPoint == (x - 1, y):
-                        safeLeadingDirection.append("West")
+                        safeLeadingDirection.append(Directions.WEST)
                     elif startingPoint == (x, y + 1):
-                        safeLeadingDirection.append("North")
+                        safeLeadingDirection.append(Directions.NORTH)
                     elif startingPoint == (x, y - 1):
-                        safeLeadingDirection.append("South")
+                        safeLeadingDirection.append(Directions.SOUTH)
             if len(safeLeadingDirection) != 0:
                 selectedAction = random.choice(safeLeadingDirection)
                 safeLeadingDirection[0] = selectedAction
                 return safeLeadingDirection
         
-        # if non of the neighbour point can lead to safe coordinate, then randomly choose the direction which can maximize the distance to ghosts.
         if len(opponentList) != 0:
             distanceToGhost = -1 * sys.maxsize + 1
             wisestAction = []
@@ -688,10 +689,12 @@ class WaStarInvader(DummyAgent):
             return wisestAction
         else:
             return [self.chooseLegalRandomAction(currentPosition, wallList)[0]]
-        
-    # NOTE: This function is for testing, currently not used.
-    # Maintain the hungry steps
+    
     def updateHungrySteps(self, currentPosition, nextAction, foodList, capsuleList, opponentPacmanList, opponentList):
+        """
+        NOTE: This function is for testing only, currently not used.
+        Maintains the hungry steps
+        """
         x, y = currentPosition[0], currentPosition[1]
         if nextAction == Directions.NORTH:
             if (x, y + 1) in foodList or (x, y + 1) in capsuleList or (x, y + 1) in opponentPacmanList or (x, y + 1) in opponentList:
