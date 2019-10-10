@@ -900,7 +900,7 @@ class WaStarInvader(DummyAgent):
             Goal Selection
             """
             goodList = []
-            huntingPacmanScoreThreshold = 3
+            huntingPacmanScoreThreshold = 7
             score = self.getScore(updatedGameState)
             if score >= huntingPacmanScoreThreshold and myScaredTime == 0:
                 if self.debug_message: print("Score: " + str(score))
@@ -1059,7 +1059,7 @@ class WaStarInvader(DummyAgent):
             safeList = []
             capsulePrioritized = False
             if len(capsuleList) != 0:
-                capsulePrioritizedDistanceThreshold = 3
+                capsulePrioritizedDistanceThreshold = 6
                 for capsule in capsuleList:
                     if self.getMazeDistance(currentPosition, capsule) <= capsulePrioritizedDistanceThreshold:
                         capsulePrioritized = True
