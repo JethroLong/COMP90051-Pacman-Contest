@@ -899,43 +899,61 @@ class WaStarInvader(DummyAgent):
             """
             Goal Selection
             """
-            for element in capsuleList:
-                if element not in foodList:
-                    foodList.append(element)
-            
+            goodList = []
             huntingPacmanScoreThreshold = 3
             score = self.getScore(updatedGameState)
             if score >= huntingPacmanScoreThreshold and myScaredTime == 0:
                 if self.debug_message: print("Score: " + str(score))
                 if self.debug_message: print("Nearby Pacman List: " + str(opponentPacmanList))
-                if len(opponentPacmanList) != 0:
-                    if self.debug_message: print("Optimistic Score & Nearby Pacman Present, Hunt It! ")
                 for element in opponentPacmanList:
-                    if element not in foodList:
-                        foodList.append(element)
-                        
+                    if element not in goodList:
+                        goodList.append(element)
+            if len(goodList) == 0:
+                if len(opponentList) == 0:
+                    for element in capsuleList:
+                        if element not in goodList:
+                            goodList.append(element)
+                    for element in foodList:
+                        if element not in goodList:
+                            goodList.append(element)
+                else:
+                    if len(goodList) == 0:
+                        for element in capsuleList:
+                            if element not in goodList:
+                                goodList.append(element)
+                    if len(goodList) == 0:
+                        for element in foodList:
+                            if element in self.safeCoordinates and element not in goodList:
+                                goodList.append(element)
+                    if len(goodList) == 0:
+                        for element in foodList:
+                            if element not in goodList:
+                                goodList.append(element)
+                            
             if updatedGameState.data.timeleft <= 180:
-                foodList = []
+                goodList = []
                 if myScaredTime == 0:
                     if len(opponentPacmanList) != 0:
                         for element in opponentPacmanList:
-                            if element not in foodList:
-                                foodList.append(element)
+                            if element not in goodList:
+                                goodList.append(element)
                         
-            if len(foodList) == 0:
+            if len(goodList) == 0:
                 if (self.red and currentPosition[0] >= int(boardWidth / 2) - 2) or (not self.red and currentPosition[0] < int(boardWidth / 2) + 2):
                     actions = self.chooseLegalRandomPatrolAction(currentPosition, wallList, self.red, boardWidth)
                     return actions[0]
                 else:
-                    foodList.append(self.bestPortalY(wallList, self.red, boardWidth, boardHeight))
+                    goodList.append(self.bestPortalY(wallList, self.red, boardWidth, boardHeight))
             
             """
             Heuristic Search
             """
-            closestFood, distance = self.closestObject(foodList, updatedGameState)
-            if self.debug_message: print("Goal: " + str(closestFood))
-            if abs(closestFood[0] - currentPosition[0]) > 10:
-                actions = self.pathDict[currentPosition][closestFood].copy()
+            closestGood, distance = self.closestObject(goodList, updatedGameState)
+            if self.debug_message: print("Goal: " + str(closestGood))
+            """
+            if abs(closestGood[0] - currentPosition[0]) > 10:
+                actions = self.pathDict[currentPosition][closestGood].copy()
+                print(actions)
                 allowedActions = self.getLegalActionOfPosition(currentPosition, updatedGameState)
                 if actions[0] == Directions.STOP:
                     actions[0] = actions[1]
@@ -943,15 +961,9 @@ class WaStarInvader(DummyAgent):
                     selectedAction = random.choice(allowedActions)
                     actions[0] = selectedAction
             else:
-                closestFoodProblem = PositionSearchProblem(updatedGameState, updatedGameState.getAgentPosition(self.index), goal=closestFood)
-                actions = wastarSearch(closestFoodProblem, manhattanHeuristic)
-            
-            if closestFood in foodList:
-                if self.debug_message: print("Goal Type: Food")
-            elif closestFood in capsuleList:
-                if self.debug_message: print("Goal Type: Capsule")
-            else:
-                if self.debug_message: print("Goal Type: Nearby Pacman in Home Territory")
+            """
+            closestGoodProblem = PositionSearchProblem(updatedGameState, updatedGameState.getAgentPosition(self.index), goal=closestGood)
+            actions = wastarSearch(closestGoodProblem, manhattanHeuristic)
             if len(actions) == 0:
                 actions = self.chooseLegalRandomAction(currentPosition, wallList)
             if self.debug_message: print("Action: " + actions[0])
