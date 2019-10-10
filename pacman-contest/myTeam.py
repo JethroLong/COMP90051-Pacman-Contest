@@ -1269,6 +1269,7 @@ class WaStarDefender(DummyAgent):
         self.eatDefender = None
         self.my_zone = None
         self.potentialInvaders = None
+        self.teamInvader = None
     
     def registerInitialState(self, gameState):
         """
@@ -1303,6 +1304,9 @@ class WaStarDefender(DummyAgent):
         self.myFood = self.getFoodYouAreDefending(gameState).asList()
         self.potentialInvaders = []
         self.boardHeight = gameState.data.layout.height
+        for index in self.getTeam(gameState):
+            if index != self.index:
+                self.teamInvader = index
     
     def chooseAction(self, gameState):
         """
@@ -1421,8 +1425,6 @@ class WaStarDefender(DummyAgent):
     def track(self, invader, gameState):
         trackProblem = TrackProblem(gameState, self.currentPosition, opponentborder=self.opponentborder, goal=invader, self_border=self.boarder_mid[0], height=self.boardHeight)
         actions = wastarSearch(trackProblem, manhattanHeuristic)
-        # print("mode: stealFood")
-        # print(self.currentPosition)
         if len(actions) > 0:
             return actions[0]
         else:
@@ -1430,10 +1432,24 @@ class WaStarDefender(DummyAgent):
     
     def stealFood(self, gameState):
         foods = self.getFood(gameState).asList()
+        capsules = self.getCapsules(gameState)
         d = 6
         d_relax = 10
+        d_relax_c = 15
         temp = []
         temp2 = []
+        if gameState.getAgentState(self.teamInvader).isPacman:
+            for capsule in capsules:
+                ds = []
+                for i in range(self.maze_dim[1]):
+                    if (self.boarder_mid[0], i) not in self.getWallList(gameState):
+                        t = self.getMazeDistance(capsule, (self.boarder_mid[0], i))
+                        ds.append(t)
+                minds = min(ds)
+                if minds < d:
+                    temp.append((capsule, minds))
+                if minds < d_relax_c and minds >= d:
+                    temp2.append((capsule, minds))
         for food in foods:
             ds = []
             for i in range(self.maze_dim[1]):
