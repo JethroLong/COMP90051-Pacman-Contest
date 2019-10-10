@@ -996,6 +996,7 @@ class WaStarInvader(DummyAgent):
             
             huntingPacmanScoreThreshold = 3
             score = self.getScore(updatedGameState)
+            """
             if score >= huntingPacmanScoreThreshold:
                 for element in opponentPacmanList:
                     tempDistance = self.getMazeDistance(currentPosition, element)
@@ -1004,6 +1005,7 @@ class WaStarInvader(DummyAgent):
                         if tempDistance < closestDistance:
                             closestDistance = tempDistance
                             closestFood = element
+            """
             
             """
             Heuristic Search
