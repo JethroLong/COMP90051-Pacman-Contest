@@ -292,7 +292,6 @@ class DummyAgent(CaptureAgent):
                             for each in successors:
                                 if currState not in path.keys(): path[currState] = {}
                                 if each[0] not in path.keys(): path[each[0]] = {}
-
                                 '''
                                 BFS Speed-up. Infer backwards from forward path
                                 Trick:
@@ -304,11 +303,11 @@ class DummyAgent(CaptureAgent):
                                 if each[0] not in closed:
                                     path[currState][each[0]] = [each[1]]
                                     path[each[0]][currState] = getReversedDirection([each[1]])
-                                    assert len(path[currState][each[0]]) == len(path[each[0]][currState])
+                                    # assert len(path[currState][each[0]]) == len(path[each[0]][currState])
                                     temp = (each[0], currPath + [each[1]])
                                     path[p1][each[0]] = temp[1]
                                     path[each[0]][p1] = getReversedDirection(temp[1])
-                                    assert len(path[p1][each[0]]) == len(path[each[0]][p1])
+                                    # assert len(path[p1][each[0]]) == len(path[each[0]][p1])
                                     open.push(temp)
                         closed.append(currState)
             return path
@@ -1290,10 +1289,12 @@ class WaStarDefender(DummyAgent):
             self.boarder_mid = (half_width, self.maze_dim[1] // 2)
             self.opponentborder = half_width - 1
             self.my_zone = range(half_width, self.maze_dim[0])
+            self.nearHome = range(self.maze_dim[0] - 5, self.maze_dim[0])
         else:
             self.boarder_mid = (half_width - 1, self.maze_dim[1] // 2)
             self.opponentborder = half_width
             self.my_zone = range(half_width)
+            self.nearHome = range(5)
         while self.walls[self.boarder_mid[0]][self.boarder_mid[1]]:
             self.boarder_mid = (self.boarder_mid[0], self.boarder_mid[1] + 1)
         
@@ -1311,6 +1312,8 @@ class WaStarDefender(DummyAgent):
                     self.safeCoordinates.append((x, y))
                 else:
                     self.riskyCoordinates.append((x, y))
+        
+        self.pathDict = self.scanMaze()
     
     def chooseAction(self, gameState):
         """
@@ -1414,10 +1417,14 @@ class WaStarDefender(DummyAgent):
                     break
             if re:
                 defendFoodProblem = AvoidProblem(gameState, self.currentPosition, opponent=avoid, goal=self.boarder_mid, myzone=self.my_zone)
+                actions = wastarSearch(defendFoodProblem, manhattanHeuristic)
             else:
-                defendFoodProblem = PositionSearchProblem(gameState, self.currentPosition, goal=self.boarder_mid)
+                if self.currentPosition[0] in self.nearHome:
+                    actions = self.pathDict[self.currentPosition][self.boarder_mid].copy()
+                else:
+                    defendFoodProblem = PositionSearchProblem(gameState, self.currentPosition, goal=self.boarder_mid)
+                    actions = wastarSearch(defendFoodProblem, manhattanHeuristic)
             
-            actions = wastarSearch(defendFoodProblem, manhattanHeuristic)
             # print(re)
             # print("mode: go to the border")
             # print(self.currentPosition)
