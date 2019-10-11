@@ -4,7 +4,7 @@
 # educational purposes provided that (1) you do not distribute or publish
 # solutions, (2) you retain this notice, and (3) you provide clear
 # attribution to UC Berkeley, including a link to http://ai.berkeley.edu.
-# 
+#
 # Attribution Information: The Pacman AI projects were developed at UC Berkeley.
 # The core projects and autograders were primarily created by John DeNero
 # (denero@cs.berkeley.edu) and Dan Klein (klein@cs.berkeley.edu).
@@ -17,10 +17,10 @@
 
 """
     HEURISTIC SEARCH PACMAN AGENTS
-    
+
     The technique we used in this implementation is Heuristic Search
     A* algorithm is used, with different goal and different heuristic under different circumstances
-    
+
 """
 
 import sys
@@ -39,13 +39,13 @@ import re, os
 
 def createTeam(firstIndex, secondIndex, isRed,
                first = 'WaStarInvader', second = 'WaStarDefender'):
-    
+
     """
     This function should return a list of two agents that will form the
     team, initialized using firstIndex and secondIndex as their agent
     index numbers.  isRed is True if the red team is being created, and
     will be False if the blue team is being created.
-  
+
     As a potentially helpful development aid, this function can take
     additional string-valued keyword arguments ("first" and "second" are
     such arguments in the case of this function), which will come from
@@ -54,7 +54,7 @@ def createTeam(firstIndex, secondIndex, isRed,
     any extra arguments, so you should make sure that the default
     behavior is what you want for the nightly contest.
     """
-    
+
     # The following line is an example only; feel free to change it.
     return [eval(first)(firstIndex), eval(second)(secondIndex)]
 
@@ -100,7 +100,7 @@ class AgentFactory:
             return WaStarDefender(index)
 
 class DummyAgent(CaptureAgent):
-    
+
     """
     A Dummy agent to serve as an example of the necessary agent structure.
     You should look at baselineTeam.py for more details about how to
@@ -110,31 +110,31 @@ class DummyAgent(CaptureAgent):
     # Agent Mode
     # Under different mode, the Heuristic Search - A* Algorithm will use different goal and heuristic
     mode = ""
-    
+
     # Safe Coordinates
     # Definition: Coordinates that have at least two paths which can reach home
     safeCoordinates = []
-    
+
     # Risky Coordinates
     # Definition: Coordinates that are not classified as safe
     riskyCoordinates = []
-    
+
     # Steps from the last food / capsule / ghost eaten (Used for testing only. )
     hungrySteps = 0
-    
+
     # Before submitting the code, turn this to False to hide debug messages
     debug_message = True
 
     def __init__(self, index):
         super().__init__(index)
-    
+
         # Layout related
         self.maze_dim = None
         self.boarder_mid = None
         self.boardWidth = None
         self.boardHeight = None
         self.pathDict = None
-    
+
         # game state variables
         self.initialPosition = None
         self.currentPosition = None
@@ -144,34 +144,34 @@ class DummyAgent(CaptureAgent):
         self.walls = None
 
     def isSafeCoordinate(self, coordinate, gameState):
-        
+
         """
         Helper function to help decide the goal during heuristic search
         Decide whether the given coordinate is safe or not,
         i.e. whether there exists at least two ways back home.
         """
-        
+
         wallList = gameState.getWalls().asList()
         if coordinate in wallList:
             return False
-        
+
         capsuleList = self.getCapsuleList(gameState)
         for capsule in capsuleList:
             if capsule is not None and self.getMazeDistance(coordinate, capsule) <= 2:
                 return True
-            
+
         x, y = coordinate[0], coordinate[1]
         legalAction = self.getLegalActionOfPosition(coordinate, gameState)
         if len(legalAction) <= 1:
             return False
         if len(legalAction) == 2 and Directions.STOP in legalAction:
             return False
-        
+
         nonStopLegalAction = []
         for action in legalAction:
             if action != Directions.STOP:
                 nonStopLegalAction.append(action)
-        
+
         newStartingPoint = []
         for action in nonStopLegalAction:
             if action == Directions.EAST:
@@ -182,7 +182,7 @@ class DummyAgent(CaptureAgent):
                 newStartingPoint.append((x, y + 1))
             elif action == Directions.SOUTH:
                 newStartingPoint.append((x, y - 1))
-        
+
         numberOfEscapePath = 0
         for startingPoint in newStartingPoint:
             dfsProblem = PositionSearchProblem(gameState, startingPoint)
@@ -193,17 +193,17 @@ class DummyAgent(CaptureAgent):
             if numberOfEscapePath > 1:
                 return True
         return False
-    
+
     def registerInitialState(self, gameState):
         """
         This method handles the initial setup of the
         agent to populate useful fields (such as what team
         we're on).
-    
+
         A distanceCalculator instance caches the maze distances
         between each pair of positions, so your agents can use:
         self.distancer.getDistance(p1, p2)
-    
+
         IMPORTANT: This method may run for at most 15 seconds.
         """
         '''
@@ -217,9 +217,9 @@ class DummyAgent(CaptureAgent):
         '''
         Your initialization code goes here, if you need any.
         '''
-        
+
         self.walls = gameState.getWalls()
-        
+
         # dimensions of the grid world w * h
         self.maze_dim = (gameState.data.layout.width, gameState.data.layout.height)
 
@@ -237,11 +237,11 @@ class DummyAgent(CaptureAgent):
                     self.safeCoordinates.append((x, y))
                 else:
                     self.riskyCoordinates.append((x, y))
-        
+
         self.pathDict = self.scanMaze()
-        
+
         if self.debug_message: print("==========Pre-computation Done==========")
-        
+
     ####################
     # Helper Functions #
     ####################
@@ -316,7 +316,7 @@ class DummyAgent(CaptureAgent):
 
     def chooseAction(self, gameState):
         pass
-    
+
     def getSuccessor(self, gameState, action):
         successor = gameState.generateSuccessor(self.index, action)
         position = successor.getAgentState(self.index).getPosition()
@@ -324,24 +324,24 @@ class DummyAgent(CaptureAgent):
             return successor.generateSuccessor(self.index, action)
         else:
             return successor
-    
+
     def getFeatures(self, gameState, action):
         pass
-    
+
     def getWeights(self, gameState, action):
         pass
-    
+
     def evaluate(self, gameState, action):
         pass
-    
+
     def getWidthandHeight(self, gameState):
         width = gameState.data.layout.width
         height = gameState.data.layout.height
         return width, height
-    
+
     def getWallList(self, gameState):
         return gameState.getWalls().asList()
-    
+
     def getOpponentList(self, gameState):
         opponentList = []
         for opponentIndex in self.getOpponents(gameState):
@@ -349,7 +349,7 @@ class DummyAgent(CaptureAgent):
             if not gameState.getAgentState(opponentIndex).isPacman and opponentPosition is not None:
                 opponentList.append(opponentPosition)
         return opponentList
-    
+
     def getOpponentPacmanList(self, gameState):
         opponentPacmanList = []
         for opponentIndex in self.getOpponents(gameState):
@@ -357,7 +357,7 @@ class DummyAgent(CaptureAgent):
             if gameState.getAgentState(opponentIndex).isPacman and opponentPacmanPosition is not None:
                 opponentPacmanList.append(opponentPacmanPosition)
         return opponentPacmanList
-    
+
     def areGhostsAround(self, gameState, testCoordinate, inclusiveRangeThreshold):
         """
         Check whether there are ghosts around me within certain distance
@@ -371,10 +371,10 @@ class DummyAgent(CaptureAgent):
                     if self.getMazeDistance(testCoordinate, opponentPosition) <= considerGhostAsSurroundingThreshold:
                         surroundingOpponentList.append(opponentPosition)
         return surroundingOpponentList
-    
+
     def getFoodList(self, gameState):
         return self.getFood(gameState).asList()
-    
+
     def getCapsuleList(self, gameState):
         capsuleList = self.getCapsules(gameState)
         notNoneCapsuleList = []
@@ -382,7 +382,7 @@ class DummyAgent(CaptureAgent):
             if capsule is not None:
                 notNoneCapsuleList.append(capsule)
         return notNoneCapsuleList
-    
+
     def getLegalActionOfPosition(self, coordinate, gameState):
         legalAction = []
         x = coordinate[0]
@@ -415,7 +415,7 @@ class DummyAgent(CaptureAgent):
                 closestDistance = distance
                 closestObj = candidateObject
         return closestObj, closestDistance
-    
+
     def closestObjectUsingPosition(self, listOfObjects, currentPosition):
         closestObj = None
         closestDistance = sys.maxsize
@@ -435,7 +435,7 @@ class DummyAgent(CaptureAgent):
                 farthestObj = candidateObject
                 farthestDistance = distance
         return farthestObj, farthestDistance
-    
+
     def bestPortalY(self, wallList, isRed, boardWidth, boardHeight):
         candidates = []
         if isRed:
@@ -476,7 +476,7 @@ class DummyAgent(CaptureAgent):
                                 temp = (each[0], currPath + [each[1]], currCost + each[2])
                                 open.push(temp)
         return []
-    
+
     def depthFirstSearch(self, problem, avoidCoordinate, isRed, boardWidth, wallList, opponentList):
         """
         Used to define safeCoordinates
@@ -547,7 +547,7 @@ class DummyAgent(CaptureAgent):
 '''
 
 class WaStarInvader(DummyAgent):
-    
+
     def chooseLegalRandomAction(self, currentPosition, wallList):
         """
         When heuristic search finds no path, legal random action may be used.
@@ -569,7 +569,7 @@ class WaStarInvader(DummyAgent):
             selectedAction = random.choice(actions)
             actions[0] = selectedAction
         return actions
-    
+
     def chooseLegalRandomPatrolAction(self, currentPosition, wallList, isRed, boardWidth):
         actions = []
         x, y = currentPosition[0], currentPosition[1]
@@ -598,7 +598,7 @@ class WaStarInvader(DummyAgent):
         selectedAction = random.choice(actions)
         actions[0] = selectedAction
         return actions
-    
+
     def bestAvoidGhostAction(self, gameState, currentPosition, wallList, opponentList, capsuleList):
         """
         When heuristic search finds no path, this function may be used.
@@ -614,7 +614,7 @@ class WaStarInvader(DummyAgent):
                 actions = wastarSearch(goCapsuleProblem, manhattanHeuristic)
                 if len(actions) != 0:
                     return actions
-        
+
         if len(opponentList) != 0:
             x, y = currentPosition[0], currentPosition[1]
             newStartingPoint = []
@@ -646,7 +646,7 @@ class WaStarInvader(DummyAgent):
                 selectedAction = random.choice(safeLeadingDirection)
                 safeLeadingDirection[0] = selectedAction
                 return safeLeadingDirection
-        
+
         if len(opponentList) != 0:
             distanceToGhost = -1 * sys.maxsize + 1
             wisestAction = []
@@ -688,7 +688,7 @@ class WaStarInvader(DummyAgent):
             return wisestAction
         else:
             return [self.chooseLegalRandomAction(currentPosition, wallList)[0]]
-    
+
     def updateHungrySteps(self, currentPosition, nextAction, foodList, capsuleList, opponentPacmanList, opponentList):
         """
         NOTE: This function is for testing only, currently not used.
@@ -718,7 +718,7 @@ class WaStarInvader(DummyAgent):
         if nextAction == Directions.STOP:
             self.hungrySteps += 1
         return
-    
+
     def retreat(self, gameState):
         """
         Heuristic Search Retreat Mode
@@ -743,7 +743,7 @@ class WaStarInvader(DummyAgent):
         if len(actions) == 0:
             actions = self.bestAvoidGhostAction(gameState, currentPosition, wallList, self.getOpponentList(gameState), self.getCapsuleList(gameState))
         return actions
-    
+
     def chooseAction(self, gameState):
         """
         Using Heuristic Search to decide actions for pacman agent
@@ -765,13 +765,13 @@ class WaStarInvader(DummyAgent):
         opponentList = self.getOpponentList(gameState)
         currentPosition = gameState.getAgentPosition(self.index)
         closestOpponent, closestOpponentDistance = self.closestObjectUsingPosition(opponentList, currentPosition)
-        
+
         self.updateMode(gameState, scaredTime, closestOpponentDistance)
-        
+
         if self.debug_message: print("============INVADER============")
         if self.debug_message: print("Mode: " + self.mode)
         if self.debug_message: print("Position: " + str(gameState.getAgentPosition(self.index)))
-        
+
         foodList = self.getFood(gameState).asList()
         capsuleList = self.getCapsules(gameState)
         opponentPacmanList = self.getOpponentPacmanList(gameState)
@@ -780,7 +780,7 @@ class WaStarInvader(DummyAgent):
         if self.debug_message: print("Opponent Pacman List: " + str(opponentPacmanList))
         if closestOpponent is not None:
             if self.debug_message: print("Closest Opponent Ghost: " + str(closestOpponent) + ": " + str(closestOpponentDistance))
-        
+
         """
         Handle Walls
         """
@@ -789,7 +789,7 @@ class WaStarInvader(DummyAgent):
         updatedGameState = gameState.deepCopy()
         grid_width, grid_height = self.getWidthandHeight(gameState)
         wall_grids = gameState.getWalls().data
-        
+
         if len(opponentList) != 0 and numberOfScaredGhost != len(list(opponentDict.keys())):
             if self.debug_message: print("Number of Opponent Around Me: " + str(len(opponentList)))
             if self.debug_message: print("Number of Scared Opponent Around Me: " + str(numberOfScaredGhost))
@@ -816,7 +816,7 @@ class WaStarInvader(DummyAgent):
                             if (x, y - 1) not in wallList:
                                 wallList.append((x, y - 1))
                                 wall_grids[x][y - 1] = True
-                                
+
         boardWidth, boardHeight = self.getWidthandHeight(updatedGameState)
         if self.red and currentPosition[0] == int(boardWidth / 2) - 1:
             if (int(boardWidth / 2), currentPosition[1]) in opponentList:
@@ -838,11 +838,11 @@ class WaStarInvader(DummyAgent):
             if (int(boardWidth / 2), currentPosition[1]) in opponentPacmanList:
                 wallList.append((int(boardWidth / 2), currentPosition[1]))
                 wall_grids[int(boardWidth / 2)][currentPosition[1]] = True
-        
+
         myScaredTime = 0
         if not updatedGameState.getAgentState(self.index).isPacman:
             myScaredTime = updatedGameState.data.agentStates[self.index].scaredTimer
-        
+
         if len(opponentPacmanList) != 0 and self.mode == "invader home mode" and myScaredTime > 0:
             if self.debug_message: print("My Scared Timer: " + str(myScaredTime))
             for candidateOpponentPacman in opponentPacmanList:
@@ -882,13 +882,13 @@ class WaStarInvader(DummyAgent):
                     if (newBorderX, h) not in wallList:
                         wallList.append((newBorderX, h))
                         wall_grids[newBorderX][h] = True
-        
+
         combined_wall_grid = game.Grid(grid_width, grid_height, False)
         for i in range(grid_width):
             for j in range(grid_height):
                 combined_wall_grid.data[i][j] = wall_grids[i][j]
         updatedGameState.data.layout.walls = combined_wall_grid
-        
+
         """
         The heuristic search will be done below.
         During the heuristic search, under different circumstances, different goal and different heuristic will be used.
@@ -928,7 +928,7 @@ class WaStarInvader(DummyAgent):
                         for element in foodList:
                             if element not in goodList:
                                 goodList.append(element)
-                            
+
             if updatedGameState.data.timeleft <= 180:
                 goodList = []
                 if myScaredTime == 0:
@@ -936,14 +936,14 @@ class WaStarInvader(DummyAgent):
                         for element in opponentPacmanList:
                             if element not in goodList:
                                 goodList.append(element)
-                        
+
             if len(goodList) == 0:
                 if (self.red and currentPosition[0] >= int(boardWidth / 2) - 2) or (not self.red and currentPosition[0] < int(boardWidth / 2) + 2):
                     actions = self.chooseLegalRandomPatrolAction(currentPosition, wallList, self.red, boardWidth)
                     return actions[0]
                 else:
                     goodList.append(self.bestPortalY(wallList, self.red, boardWidth, boardHeight))
-            
+
             """
             Heuristic Search
             """
@@ -969,8 +969,8 @@ class WaStarInvader(DummyAgent):
             updatedGameState.data.layout.walls = original_wall_grids
             gameState = updatedGameState
             return actions[0]
-        
-        
+
+
         elif self.mode == "invader hunting mode" and len(opponentList) == 0:
             """
             Goal Selection
@@ -983,7 +983,7 @@ class WaStarInvader(DummyAgent):
                 foodDistanceThreshold = 6
                 capsuleDistanceThreshold = 6
                 pacmanDistanceThreshold = 6
-            
+
             goodList = []
             closestFood = None
             closestDistance = sys.maxsize
@@ -1001,7 +1001,7 @@ class WaStarInvader(DummyAgent):
                     if tempDistance < closestDistance:
                         closestDistance = tempDistance
                         closestFood = element
-            
+
             huntingPacmanScoreThreshold = 3
             score = self.getScore(updatedGameState)
             """
@@ -1014,7 +1014,7 @@ class WaStarInvader(DummyAgent):
                             closestDistance = tempDistance
                             closestFood = element
             """
-            
+
             """
             Heuristic Search
             """
@@ -1024,11 +1024,11 @@ class WaStarInvader(DummyAgent):
                 updatedGameState.data.layout.walls = original_wall_grids
                 gameState = updatedGameState
                 return actions[0]
-            
+
             closestFoodProblem = PositionSearchProblem(updatedGameState, updatedGameState.getAgentPosition(self.index), goal=closestFood)
             if self.debug_message: print("Goal: " + str(closestFood))
             actions = wastarSearch(closestFoodProblem, manhattanHeuristic)
-            
+
             if closestFood in foodList:
                 if self.debug_message: print("Goal Type: Food")
             elif closestFood in capsuleList:
@@ -1079,16 +1079,16 @@ class WaStarInvader(DummyAgent):
                             safeList.append(foodCoordinate)
                     elif foodCoordinate in self.safeCoordinates:
                         safeList.append(foodCoordinate)
-            
+
             for capsuleCoordinate in capsuleList:
                 safeList.append(capsuleCoordinate)
-            
+
             if len(safeList) == 0:
                 actions = self.retreat(updatedGameState)
                 updatedGameState.data.layout.walls = original_wall_grids
                 gameState = updatedGameState
                 return actions[0]
-            
+
             """
             Heuristic Search
             """
@@ -1104,7 +1104,7 @@ class WaStarInvader(DummyAgent):
                     actions = self.bestAvoidGhostAction(updatedGameState, currentPosition, wallList, self.getOpponentList(updatedGameState), self.getCapsuleList(updatedGameState))
                 if self.debug_message: print("Action: " + str(actions[0]))
                 return actions[0]
-            
+
             if closestSafe in foodList:
                 if self.debug_message: print("Goal Type: Safe Food")
             elif closestSafe in capsuleList:
@@ -1122,7 +1122,7 @@ class WaStarInvader(DummyAgent):
             updatedGameState.data.layout.walls = original_wall_grids
             gameState = updatedGameState
             return actions[0]
-        
+
         elif self.mode == "invader power mode":
             """
             Goal Selection
@@ -1141,7 +1141,7 @@ class WaStarInvader(DummyAgent):
                     if element == key[1] and element not in wallList and opponentDict[key] >= scaredTimerCountingDownThreshold and element not in goodList:
                         if self.getMazeDistance(currentPosition, element) <= scaredOpponentGhostDistance:
                             goodList.append(element)
-            
+
             """
             Heuristic Search
             """
@@ -1157,7 +1157,7 @@ class WaStarInvader(DummyAgent):
                 updatedGameState.data.layout.walls = original_wall_grids
                 gameState = updatedGameState
                 return actions[0]
-            
+
             closestFood, distance = self.closestObject(goodList, updatedGameState)
             if self.debug_message: print("Goal: " + str(closestFood))
             closestFoodProblem = PositionSearchProblem(updatedGameState, updatedGameState.getAgentPosition(self.index), goal=closestFood)
@@ -1181,8 +1181,8 @@ class WaStarInvader(DummyAgent):
             updatedGameState.data.layout.walls = original_wall_grids
             gameState = updatedGameState
             return actions[0]
-        
-        
+
+
         elif self.mode == "invader retreat mode":
             """
             Goal Selection & Heuristic Search
@@ -1193,10 +1193,10 @@ class WaStarInvader(DummyAgent):
             updatedGameState.data.layout.walls = original_wall_grids
             gameState = updatedGameState
             return actions[0]
-           
+
     def updateScore(self, gameState):
         gameState.data.score = len(gameState.getRedFood().asList()) - len(gameState.getBlueFood().asList())
-    
+
     def updateMode(self, gameState, scaredTime, closestOpponentDistance):
         boardWidth, boardHeight = self.getWidthandHeight(gameState)
         currentPosition = gameState.getAgentPosition(self.index)
@@ -1224,13 +1224,13 @@ class WaStarInvader(DummyAgent):
             if gameState.data._capsuleEaten is None and scaredTime < scaredTimerCountingDownThreshold:
                 self.mode = "invader hunting mode"
             self.mode = "invader hunting mode"
-    
+
     def evaluate(self, gameState, action):
         pass
-    
+
     def getFeatures(self, gameState, action):
         pass
-    
+
     def getWeights(self, gameState, action):
         pass
 
@@ -1247,14 +1247,14 @@ class WaStarDefender(DummyAgent):
       2.
 
     """
-    
+
     def __init__(self, index):
         super().__init__(index)
-        
+
         # Layout related
         self.maze_dim = None
         self.boarder_mid = None
-        
+
         # game state variables
         self.initialPosition = None
         self.currentPosition = None
@@ -1266,7 +1266,7 @@ class WaStarDefender(DummyAgent):
         self.my_zone = None
         self.potentialInvaders = None
         self.teamInvader = None
-    
+
     def registerInitialState(self, gameState):
         """
         This func will be called when:
@@ -1278,9 +1278,9 @@ class WaStarDefender(DummyAgent):
         self.walls = gameState.getWalls()
         # dimensions of the grid world w * h
         self.maze_dim = (gameState.data.layout.width, gameState.data.layout.height)
-        
+
         self.opponentIndices = self.getOpponents(gameState)
-        
+
         self.start = gameState.getAgentPosition(self.index)
         self.initialPosition = gameState.getAgentPosition(self.index)
         half_width = self.maze_dim[0] // 2
@@ -1289,7 +1289,7 @@ class WaStarDefender(DummyAgent):
             self.boarder_mid = (half_width, self.maze_dim[1] // 2)
             self.opponentborder = half_width - 1
             self.my_zone = range(half_width, self.maze_dim[0])
-            self.nearHome = range(self.maze_dim[0] - 5, self.maze_dim[0])
+            self.nearHome = range(self.maze_dim[0]-5,self.maze_dim[0])
         else:
             self.boarder_mid = (half_width - 1, self.maze_dim[1] // 2)
             self.opponentborder = half_width
@@ -1297,7 +1297,7 @@ class WaStarDefender(DummyAgent):
             self.nearHome = range(5)
         while self.walls[self.boarder_mid[0]][self.boarder_mid[1]]:
             self.boarder_mid = (self.boarder_mid[0], self.boarder_mid[1] + 1)
-        
+
         self.eatDefender = False
         self.myFood = self.getFoodYouAreDefending(gameState).asList()
         self.potentialInvaders = []
@@ -1312,9 +1312,9 @@ class WaStarDefender(DummyAgent):
                     self.safeCoordinates.append((x, y))
                 else:
                     self.riskyCoordinates.append((x, y))
-        
+
         self.pathDict = self.scanMaze()
-    
+
     def chooseAction(self, gameState):
         """
         The func as the agent's turn commences, choose action accordingly based on
@@ -1330,7 +1330,7 @@ class WaStarDefender(DummyAgent):
         """
         # update current status
         self.currentPosition = gameState.getAgentPosition(self.index)
-        
+
         invaders = self.searchInvadersPosition(gameState)
         if invaders:
             self.searching = False
@@ -1340,7 +1340,7 @@ class WaStarDefender(DummyAgent):
                 return self.scaredAction(gameState, invaders)
         else:
             return self.defend(gameState)  # routine patrol
-    
+
     def searchInvadersPosition(self, gameState):
         """
         Search all observable invaders (enemy pacmans)
@@ -1357,7 +1357,7 @@ class WaStarDefender(DummyAgent):
                     if opponent not in self.potentialInvaders:
                         self.potentialInvaders.append(opponent)
         return invaders
-    
+
     def scaredAction(self, gameState, invaders):
         """
          Actions a scared ghost may perform.
@@ -1372,7 +1372,7 @@ class WaStarDefender(DummyAgent):
             return self.suicide(gameState, enemyPosition)
         else:
             return self.flee(gameState, enemyPosition)
-    
+
     def suicide(self, gameState, enemyPosition):
         # print("mode: suicide")
         # print(self.currentPosition)
@@ -1382,7 +1382,7 @@ class WaStarDefender(DummyAgent):
             return actions[0]
         else:
             return 'Stop'
-    
+
     def defend(self, gameState):
         currentFood = self.getFoodYouAreDefending(gameState).asList()
         if len(self.myFood) > len(currentFood) or self.searching:
@@ -1424,7 +1424,7 @@ class WaStarDefender(DummyAgent):
                 else:
                     defendFoodProblem = PositionSearchProblem(gameState, self.currentPosition, goal=self.boarder_mid)
                     actions = wastarSearch(defendFoodProblem, manhattanHeuristic)
-            
+
             # print(re)
             # print("mode: go to the border")
             # print(self.currentPosition)
@@ -1432,15 +1432,15 @@ class WaStarDefender(DummyAgent):
                 return actions[0]
             else:
                 return 'Stop'
-    
+
     def track(self, invader, gameState):
-        trackProblem = TrackProblem(gameState, self.currentPosition, opponentborder=self.opponentborder, goal=invader, self_border=self.boarder_mid[0], height=self.boardHeight, myZone=self.my_zone)
+        trackProblem = TrackProblem(gameState, self.currentPosition, opponentborder=self.opponentborder, goal=invader, self_border=self.boarder_mid[0], height=self.boardHeight,myZone=self.my_zone)
         actions = wastarSearch(trackProblem, manhattanHeuristic)
         if len(actions) > 0:
             return actions[0]
         else:
             return 'Stop'
-    
+
     def stealFood(self, gameState):
         foods = self.getFood(gameState).asList()
         capsules = self.getCapsules(gameState)
@@ -1500,7 +1500,7 @@ class WaStarDefender(DummyAgent):
                 minds = min(ds)
                 if minds < 5 or (minds < 8 and self.isSafeCoordinate(food, gameState)):
                     temp.append((food, False))
-        
+
         nearestFoodDistance = 100
         nearestFood = None
         for (target, capsule) in temp:
@@ -1510,7 +1510,7 @@ class WaStarDefender(DummyAgent):
             if d < nearestFoodDistance:
                 nearestFoodDistance = d
                 nearestFood = target
-        
+
         if nearestFood:
             re = False
             for opponent in self.opponentIndices:
@@ -1534,7 +1534,7 @@ class WaStarDefender(DummyAgent):
         else:
             self.eatDefender = False
             return self.defend(gameState)
-    
+
     def findInvader(self, gameState, foodEaten):
         re = False
         for opponent in self.opponentIndices:
@@ -1548,8 +1548,8 @@ class WaStarDefender(DummyAgent):
             closestFoodProblem = AvoidProblem(gameState, self.currentPosition, opponent=avoid, goal=foodEaten, myzone=self.my_zone)
         else:
             closestFoodProblem = PositionSearchProblem(gameState, self.currentPosition, goal=foodEaten)
-        
-        actions = wastarSearch(closestFoodProblem, manhattanHeuristic)
+
+        actions = wastarSearch(closestFoodProblem, mazeDistanceHeuristic)
         # print("mode: findInvader")
         # print(self.currentPosition)
         if len(actions) > 0:
@@ -1557,7 +1557,7 @@ class WaStarDefender(DummyAgent):
         else:
             self.searching = False
             return self.defend(gameState)
-    
+
     def flee(self, gameState, enemyPosition):
         fleeProblem = FleeProblem(gameState, self.currentPosition, enemyPosition, goal=enemyPosition)
         actions = wastarSearch(fleeProblem, manhattanHeuristic_list)
@@ -1567,7 +1567,7 @@ class WaStarDefender(DummyAgent):
             return actions[0]
         else:
             return 'Stop'
-    
+
     def hunt(self, gameState, invaders):
         """
         Actually it is defending food from opponent rather than hunting opponent
@@ -1575,7 +1575,7 @@ class WaStarDefender(DummyAgent):
         logic 1: Set the pacman's closet food as the goal
         logic 2: Set the pacman's position as the goal
         """
-        
+
         ''' 1
         foodDefending, distance = self.closestObjectUsingPosition(self.getFoodYouAreDefending(gameState).asList(),
                                                                   self.opponentPosition)
@@ -1607,15 +1607,15 @@ class WaStarDefender(DummyAgent):
             defendFoodProblem = AvoidProblem(gameState, self.currentPosition, opponent=avoid, goal=target, myzone=self.my_zone)
         else:
             defendFoodProblem = PositionSearchProblem(gameState, self.currentPosition, goal=target)
-        
-        actions = wastarSearch(defendFoodProblem, manhattanHeuristic)
+
+        actions = wastarSearch(defendFoodProblem, mazeDistanceHeuristic)
         # print("mode: hunt")
         # print(self.currentPosition)
         if len(actions) > 0:
             return actions[0]
         else:
             return Directions.STOP
-    
+
     def farthestObjectUsingPosition(self, listOfObjects, currentPosition):
         farthestObj = None
         farthestDistance = 0
@@ -1624,15 +1624,15 @@ class WaStarDefender(DummyAgent):
                 farthestDistance = self.getMazeDistance(candidateObject, currentPosition)
                 farthestObj = candidateObject
         return farthestObj, farthestDistance
-    
+
     def getWidthandHeight(self, gameState):
         width = gameState.data.layout.width
         height = gameState.data.layout.height
         return width, height
-    
+
     def getFeatures(self, gameState, action):
         pass
-    
+
     def getWeights(self, gameState, action):
         pass
 
@@ -1642,11 +1642,11 @@ class WaStarDefender(DummyAgent):
 ###################################
 def wastarSearch(problem, heuristic):
     priorityFunc = lambda x: x[2] + heuristic(x[0], problem)
-    
+
     # initialize a priority queue
     open = util.PriorityQueue()
     closed = []
-    
+
     # Retrieve the init state
     init = (problem.getStartState(), ['Stop'], 0)
     open.push(init, priorityFunc(init))
@@ -1655,17 +1655,17 @@ def wastarSearch(problem, heuristic):
         currState = currNode[0]
         currPath = currNode[1]
         currPathCost = currNode[2]
-        
+
         expandedThreshold = 360
         if problem._expanded == expandedThreshold:
             return currPath[1:]
-        
+
         if problem.isGoalState(currState):
             return currPath[1:]
         else:
             closed.append(currState)
         successors = problem.getSuccessors(currState)
-        
+
         if len(successors) > 0:
             for each in successors:
                 # if each not in wallList:
@@ -1674,7 +1674,7 @@ def wastarSearch(problem, heuristic):
                 if newState not in closed:
                     temp = (each[0], currPath + [each[1]], newPathCost)
                     open.update(temp, priorityFunc(temp))
-    
+
     return []
 
 
@@ -1694,6 +1694,10 @@ def manhattanHeuristic_list(position, problem, info={}):
     return min(l)
 
 
+def mazeDistanceHeuristic(position, problem, info = {}):
+        prob = PositionSearchProblem(problem.gameState, start=position, goal=problem.goal,startState=None, warn=False, visualize=False)
+        return len(breadthFirstSearch(prob))
+
 ###################################
 #      Problem Gallery
 ###################################
@@ -1706,13 +1710,13 @@ class SearchProblem:
 
     You do not need to change anything in this class, ever.
     """
-    
+
     def getStartState(self):
         """
         Returns the start state for the search problem.
         """
         util.raiseNotDefined()
-    
+
     def isGoalState(self, state):
         """
           state: Search state
@@ -1720,7 +1724,7 @@ class SearchProblem:
         Returns True if and only if the state is a valid goal state.
         """
         util.raiseNotDefined()
-    
+
     def getSuccessors(self, state):
         """
           state: Search state
@@ -1731,7 +1735,7 @@ class SearchProblem:
         the incremental cost of expanding to that successor.
         """
         util.raiseNotDefined()
-    
+
     def getCostOfActions(self, actions):
         """
          actions: A list of actions to take
@@ -1753,7 +1757,7 @@ class PositionSearchProblem(SearchProblem):
 
     Note: this search problem is fully specified; you should NOT change it.
     """
-    
+
     def __init__(self, gameState, startState, costFn=lambda x: 1, goal=(1, 1), start=None, warn=True, visualize=False):
         """
         Stores the start and goal.
@@ -1769,18 +1773,18 @@ class PositionSearchProblem(SearchProblem):
         self.costFn = costFn
         self.visualize = visualize
         self.gameState = gameState
-        
+
         # For display purposes
         self._visited, self._visitedlist, self._expanded = {}, [], 0  # DO NOT CHANGE
-    
+
     def getStartState(self):
         return self.startState
-    
+
     def isGoalState(self, state):
         isGoal = state == self.goal
-        
+
         return isGoal
-    
+
     def getSuccessors(self, state):
         """
         Returns successor states, the actions they require, and a cost of 1.
@@ -1792,7 +1796,7 @@ class PositionSearchProblem(SearchProblem):
          required to get there, and 'stepCost' is the incremental
          cost of expanding to that successor
         """
-        
+
         successors = []
         for action in [Directions.NORTH, Directions.SOUTH, Directions.EAST, Directions.WEST]:
             x, y = state
@@ -1802,15 +1806,15 @@ class PositionSearchProblem(SearchProblem):
                 nextState = (nextx, nexty)
                 cost = self.costFn(nextState)
                 successors.append((nextState, action, cost))
-        
+
         # Bookkeeping for display purposes
         self._expanded += 1  # DO NOT CHANGE
         if state not in self._visited:
             self._visited[state] = True
             self._visitedlist.append(state)
-        
+
         return successors
-    
+
     def getCostOfActions(self, actions):
         """
         Returns the cost of a particular sequence of actions. If those actions
@@ -1852,10 +1856,10 @@ class FleeProblem(PositionSearchProblem):
         self.goal = [(x + 2, y), (x - 2, y), (x + 1, y + 1), (x - 1, y + 1), (x + 1, y - 1), (x - 1, y - 1), (x, y + 2), (x, y - 2)]
         self.costFn = costFn
         self.visualize = visualize
-        
+
         # For display purposes
         self._visited, self._visitedlist, self._expanded = {}, [], 0  # DO NOT CHANGE
-    
+
     def isGoalState(self, state):
         isGoal = state in self.goal
         return isGoal
@@ -1871,6 +1875,7 @@ class AvoidProblem(FleeProblem):
         costFn: A function from a search state (tuple) to a non-negative number
         goal: A position in the gameState
         """
+        self.gameState = gameState
         self.walls = gameState.getWalls()
         (x, y) = opponent
         self.walls[x][y] = True
@@ -1881,19 +1886,20 @@ class AvoidProblem(FleeProblem):
         if x not in myzone:
             self.walls[x][y + 1] = True
             self.walls[x][y - 1] = True
-        
+
         self.startState = startState
         if start != None: self.startState = start
         self.goal = goal
         self.costFn = costFn
         self.visualize = visualize
-        
+
         # For display purposes
         self._visited, self._visitedlist, self._expanded = {}, [], 0  # DO NOT CHANGE
-    
+
     def isGoalState(self, state):
         isGoal = state == self.goal
         return isGoal
+
 
 class TrackProblem(PositionSearchProblem):
     def __init__(self, gameState, startState, costFn=lambda x: 1, goal=(1, 1), opponentborder = 15, self_border = 16,height = 0,start=None, warn=True,
@@ -1930,3 +1936,60 @@ class TrackProblem(PositionSearchProblem):
 
         # For display purposes
         self._visited, self._visitedlist, self._expanded = {}, [], 0  # DO NOT CHANGE
+
+def generalGraphSearch(problem, structure):
+    """
+    Defines a general algorithm to search a graph.
+    Parameters are structure, which can be any data structure with .push() and .pop() methods, and problem, which is the
+    search problem.
+    """
+
+    # Push the root node/start into the data structure in this format: [(state, action taken, cost)]
+    # The list pushed into the structure for the second node will look something like this:
+    # [(root_state, "Stop", 0), (new_state, "North", 1)]
+    structure.push([(problem.getStartState(), "Stop", 0)])
+
+    # Initialise the list of visited nodes to an empty list
+    visited = []
+
+    # While the structure is not empty, i.e. there are still elements to be searched,
+    while not structure.isEmpty():
+        # get the path returned by the data structure's .pop() method
+        path = structure.pop()
+
+        # The current state is the first element in the last tuple of the path
+        # i.e. [(root_state, "Stop", 0), (new_state, "North", 1)][-1][0] = (new_state, "North", 1)[0] = new_state
+        curr_state = path[-1][0]
+
+        # if the current state is the goal state,
+        if problem.isGoalState(curr_state):
+            # return the actions to the goal state
+            # which is the second element for each tuple in the path, ignoring the first "Stop"
+            return [x[1] for x in path][1:]
+
+        # if the current state has not been visited,
+        if curr_state not in visited:
+            # mark the current state as visited by appending to the visited list
+            visited.append(curr_state)
+
+            # for all the successors of the current state,
+            for successor in problem.getSuccessors(curr_state):
+                # successor[0] = (state, action, cost)[0] = state
+                # if the successor's state is unvisited,
+                if successor[0] not in visited:
+                    # Copy the parent's path
+                    successorPath = path[:]
+                    # Set the path of the successor node to the parent's path + the successor node
+                    successorPath.append(successor)
+                    # Push the successor's path into the structure
+                    structure.push(successorPath)
+
+    # If search fails, return False
+    return False
+
+def breadthFirstSearch(problem):
+    # Initialize an empty Queue
+    queue = util.Queue()
+
+    # BFS is general graph search with a Queue as the data structure
+    return generalGraphSearch(problem, queue)
