@@ -1423,7 +1423,7 @@ class WaStarDefender(DummyAgent):
                 return 'Stop'
     
     def track(self, invader, gameState):
-        trackProblem = TrackProblem(gameState, self.currentPosition, opponentborder=self.opponentborder, goal=invader, self_border=self.boarder_mid[0], height=self.boardHeight)
+        trackProblem = TrackProblem(gameState, self.currentPosition, opponentborder=self.opponentborder, goal=invader, self_border=self.boarder_mid[0], height=self.boardHeight, myZone=self.my_zone)
         actions = wastarSearch(trackProblem, manhattanHeuristic)
         if len(actions) > 0:
             return actions[0]
@@ -1865,7 +1865,7 @@ class AvoidProblem(FleeProblem):
 
 class TrackProblem(PositionSearchProblem):
     def __init__(self, gameState, startState, costFn=lambda x: 1, goal=(1, 1), opponentborder = 15, self_border = 16,height = 0,start=None, warn=True,
-                 visualize=False):
+                 visualize=False, myZone = None):
         """
         Stores the start and goal.
 
@@ -1876,6 +1876,18 @@ class TrackProblem(PositionSearchProblem):
         self.walls = gameState.getWalls()
         for i in range(height):
             self.walls[opponentborder][i] = True
+
+        (goalx, goaly) = goal
+        if goalx not in myZone:
+            self.walls[goalx][goaly] = True
+            self.walls[goalx][goaly+1] = True
+            self.walls[goalx][goaly-1] = True
+
+        if goalx+1 not in myZone:
+            self.walls[goalx+1][goaly] = True
+        if goalx-1 not in myZone:
+            self.walls[goalx-1][goaly] = True
+
         self.startState = startState
         if start != None: self.startState = start
         self.goal = (self_border, goal[1])
