@@ -950,8 +950,7 @@ class WaStarInvader(DummyAgent):
             """
             closestGood, distance = self.closestObject(goodList, updatedGameState)
             if self.debug_message: print("Goal: " + str(closestGood))
-            """
-            if abs(closestGood[0] - currentPosition[0]) > 10:
+            if abs(closestGood[0] - currentPosition[0]) > 10 and ((self.red and currentPosition[0] <= int(boardWidth / 4)) or (not self.red and currentPosition[0] >= int(boardWidth / 4 * 3))):
                 actions = self.pathDict[currentPosition][closestGood].copy()
                 print(actions)
                 allowedActions = self.getLegalActionOfPosition(currentPosition, updatedGameState)
@@ -961,9 +960,8 @@ class WaStarInvader(DummyAgent):
                     selectedAction = random.choice(allowedActions)
                     actions[0] = selectedAction
             else:
-            """
-            closestGoodProblem = PositionSearchProblem(updatedGameState, updatedGameState.getAgentPosition(self.index), goal=closestGood)
-            actions = wastarSearch(closestGoodProblem, manhattanHeuristic)
+                closestGoodProblem = PositionSearchProblem(updatedGameState, updatedGameState.getAgentPosition(self.index), goal=closestGood)
+                actions = wastarSearch(closestGoodProblem, manhattanHeuristic)
             if len(actions) == 0:
                 actions = self.chooseLegalRandomAction(currentPosition, wallList)
             if self.debug_message: print("Action: " + actions[0])
@@ -1307,6 +1305,13 @@ class WaStarDefender(DummyAgent):
         for index in self.getTeam(gameState):
             if index != self.index:
                 self.teamInvader = index
+        self.boardWidth = self.maze_dim[0]
+        for x in range(self.boardWidth):
+            for y in range(self.boardHeight):
+                if self.isSafeCoordinate((x, y), gameState):
+                    self.safeCoordinates.append((x, y))
+                else:
+                    self.riskyCoordinates.append((x, y))
     
     def chooseAction(self, gameState):
         """
@@ -1437,48 +1442,69 @@ class WaStarDefender(DummyAgent):
         d_relax = 10
         d_relax_c = 15
         temp = []
-        temp2 = []
-        if gameState.getAgentState(self.teamInvader).isPacman:
-            for capsule in capsules:
-                ds = []
-                for i in range(self.maze_dim[1]):
-                    if (self.boarder_mid[0], i) not in self.getWallList(gameState):
-                        t = self.getMazeDistance(capsule, (self.boarder_mid[0], i))
-                        ds.append(t)
-                minds = min(ds)
-                if minds < d:
-                    temp.append((capsule, minds))
-                if minds < d_relax_c and minds >= d:
-                    temp2.append((capsule, minds))
-        for food in foods:
-            ds = []
-            for i in range(self.maze_dim[1]):
-                if (self.boarder_mid[0], i) not in self.getWallList(gameState):
-                    t = self.getMazeDistance(food, (self.boarder_mid[0], i))
-                    ds.append(t)
-            minds = min(ds)
-            if minds < d:
-                temp.append((food, minds))
-            if minds < d_relax and minds >= d:
-                temp2.append((food, minds))
-        nearestFoodDistance = 100
         absolutely_safe = True
         for opponent in self.opponentIndices:
             if gameState.getAgentPosition(opponent) and gameState.getAgentState(opponent).scaredTimer <= 10:
                 absolutely_safe = False
                 break
-        nearestFood = None
+        # Very safe, be ambitious!
         if absolutely_safe:
-            temp += temp2
-            for (food, minds) in temp:
-                if nearestFoodDistance > self.getMazeDistance(food, self.currentPosition):
-                    nearestFood = food
-                    nearestFoodDistance = self.getMazeDistance(food, self.currentPosition)
+            # Help invader, Eat the capsule
+            if gameState.getAgentState(self.teamInvader).isPacman:
+                for capsule in capsules:
+                    ds = []
+                    for i in range(self.maze_dim[1]):
+                        if (self.boarder_mid[0], i) not in self.getWallList(gameState):
+                            t = self.getMazeDistance(capsule, (self.boarder_mid[0], i))
+                            ds.append(t)
+                    minds = min(ds)
+                    if minds < 12:
+                        temp.append((capsule, True))
+            # Don't Eat Capsule
+            # Food: [d < 8 or (d < 12 and safe)]
+            for food in foods:
+                ds = []
+                for i in range(self.maze_dim[1]):
+                    if (self.boarder_mid[0], i) not in self.getWallList(gameState):
+                        t = self.getMazeDistance(food, (self.boarder_mid[0], i))
+                        ds.append(t)
+                minds = min(ds)
+                if minds < 8 or (minds < 12 and self.isSafeCoordinate(food, gameState)):
+                    temp.append((food, False))
         else:
-            for (food, minds) in temp:
-                if nearestFoodDistance > self.getMazeDistance(food, self.currentPosition):
-                    nearestFood = food
-                    nearestFoodDistance = self.getMazeDistance(food, self.currentPosition)
+            # Help invader, Eat the capsule
+            if gameState.getAgentState(self.teamInvader).isPacman:
+                for capsule in capsules:
+                    ds = []
+                    for i in range(self.maze_dim[1]):
+                        if (self.boarder_mid[0], i) not in self.getWallList(gameState):
+                            t = self.getMazeDistance(capsule, (self.boarder_mid[0], i))
+                            ds.append(t)
+                    minds = min(ds)
+                    if minds < 8:
+                        temp.append((capsule, True))
+            # Don't Eat Capsule
+            # Food: [d < 5 or (d < 8 and safe)]
+            for food in foods:
+                ds = []
+                for i in range(self.maze_dim[1]):
+                    if (self.boarder_mid[0], i) not in self.getWallList(gameState):
+                        t = self.getMazeDistance(food, (self.boarder_mid[0], i))
+                        ds.append(t)
+                minds = min(ds)
+                if minds < 5 or (minds < 8 and self.isSafeCoordinate(food, gameState)):
+                    temp.append((food, False))
+        
+        nearestFoodDistance = 100
+        nearestFood = None
+        for (target, capsule) in temp:
+            d = self.getMazeDistance(target, self.currentPosition)
+            if capsule:
+                d -= 5
+            if d < nearestFoodDistance:
+                nearestFoodDistance = d
+                nearestFood = target
+        
         if nearestFood:
             re = False
             for opponent in self.opponentIndices:
