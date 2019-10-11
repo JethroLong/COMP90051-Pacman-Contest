@@ -952,7 +952,6 @@ class WaStarInvader(DummyAgent):
             if self.debug_message: print("Goal: " + str(closestGood))
             if abs(closestGood[0] - currentPosition[0]) > 10 and ((self.red and currentPosition[0] <= int(boardWidth / 4)) or (not self.red and currentPosition[0] >= int(boardWidth / 4 * 3))):
                 actions = self.pathDict[currentPosition][closestGood].copy()
-                print(actions)
                 allowedActions = self.getLegalActionOfPosition(currentPosition, updatedGameState)
                 if actions[0] == Directions.STOP:
                     actions[0] = actions[1]
