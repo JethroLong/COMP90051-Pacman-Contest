@@ -1235,7 +1235,6 @@ class WaStarInvader(DummyAgent):
         pass
 
 
-
 #################################
 #   WASTAR DEFENDER
 #################################
