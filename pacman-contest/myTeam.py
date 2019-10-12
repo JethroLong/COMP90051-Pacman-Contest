@@ -1522,7 +1522,7 @@ class WaStarDefender(DummyAgent):
                             t = self.getMazeDistance(capsule, (self.boarder_mid[0], i))
                             ds.append(t)
                     minds = min(ds)
-                    if minds < 12:
+                    if minds < 13:
                         temp.append((capsule, True))
             # Don't Eat Capsule
             # Food: [d < 8 or (d < 12 and safe)]
