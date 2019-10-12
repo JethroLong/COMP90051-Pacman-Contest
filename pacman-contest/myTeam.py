@@ -981,7 +981,7 @@ class WaStarInvader(DummyAgent):
                 # pacmanDistanceThreshold = sys.maxsize
             else:
                 foodDistanceThreshold = 6
-                capsuleDistanceThreshold = 9
+                capsuleDistanceThreshold = 7
                 # pacmanDistanceThreshold = 6
 
             goodList = []
@@ -1055,7 +1055,7 @@ class WaStarInvader(DummyAgent):
             safeList = []
             capsulePrioritized = False
             if len(capsuleList) != 0:
-                capsulePrioritizedDistanceThreshold = 9
+                capsulePrioritizedDistanceThreshold = 8
                 for capsule in capsuleList:
                     if self.getMazeDistance(currentPosition, capsule) <= capsulePrioritizedDistanceThreshold:
                         capsulePrioritized = True
