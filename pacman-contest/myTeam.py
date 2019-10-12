@@ -978,33 +978,33 @@ class WaStarInvader(DummyAgent):
             if updatedGameState.getAgentState(self.index).numCarrying == 0:
                 foodDistanceThreshold = sys.maxsize
                 capsuleDistanceThreshold = sys.maxsize
-                pacmanDistanceThreshold = sys.maxsize
+                # pacmanDistanceThreshold = sys.maxsize
             else:
                 foodDistanceThreshold = 6
-                capsuleDistanceThreshold = 6
-                pacmanDistanceThreshold = 6
+                capsuleDistanceThreshold = 9
+                # pacmanDistanceThreshold = 6
 
             goodList = []
             closestFood = None
             closestDistance = sys.maxsize
             for element in foodList:
                 tempDistance = self.getMazeDistance(currentPosition, element)
-                if element not in goodList and tempDistance < foodDistanceThreshold:
+                if element not in goodList and tempDistance <= foodDistanceThreshold:
                     goodList.append(element)
                     if tempDistance < closestDistance:
                         closestDistance = tempDistance
                         closestFood = element
             for element in capsuleList:
                 tempDistance = self.getMazeDistance(currentPosition, element)
-                if element not in goodList and tempDistance < capsuleDistanceThreshold:
+                if element not in goodList and tempDistance <= capsuleDistanceThreshold:
                     goodList.append(element)
                     if tempDistance < closestDistance:
                         closestDistance = tempDistance
                         closestFood = element
 
-            huntingPacmanScoreThreshold = 3
             score = self.getScore(updatedGameState)
             """
+            huntingPacmanScoreThreshold = 3
             if score >= huntingPacmanScoreThreshold:
                 for element in opponentPacmanList:
                     tempDistance = self.getMazeDistance(currentPosition, element)
@@ -1055,7 +1055,7 @@ class WaStarInvader(DummyAgent):
             safeList = []
             capsulePrioritized = False
             if len(capsuleList) != 0:
-                capsulePrioritizedDistanceThreshold = 6
+                capsulePrioritizedDistanceThreshold = 9
                 for capsule in capsuleList:
                     if self.getMazeDistance(currentPosition, capsule) <= capsulePrioritizedDistanceThreshold:
                         capsulePrioritized = True
