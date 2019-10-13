@@ -1772,9 +1772,9 @@ def manhattanHeuristic_list(position, problem, info={}):
     return min(l)
 
 
-def mazeDistanceHeuristic(position, problem, info = {}):
-        prob = PositionSearchProblem(problem.gameState, start=position, goal=problem.goal,startState=None, warn=False, visualize=False)
-        return len(breadthFirstSearch(prob))
+def mazeDistanceHeuristic(position, problem, info={}):
+    prob = PositionSearchProblem(problem.gameState, start=position, goal=problem.goal,startState=None, warn=False, visualize=False)
+    return len(breadthFirstSearch(prob))
 
 ###################################
 #      Problem Gallery
