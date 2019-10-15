@@ -1450,14 +1450,9 @@ class WaStarDefender(DummyAgent):
                 if self.mode == "hunt" or self.mode == "findInvader":
                     if self.mode == "hunt":
                         defendFoodProblem = PositionSearchProblem(gameState, self.currentPosition, goal=self.target)
-                        d = self.getMazeDistance(self.currentPosition, self.target)
                     if self.mode == "findInvader":
                         defendFoodProblem = PositionSearchProblem(gameState, self.currentPosition, goal=self.foodEaten)
-                        d = self.getMazeDistance(self.currentPosition, self.foodEaten)
-                    if d >= 12:
-                        actions = wastarSearch(defendFoodProblem, manhattanHeuristic)
-                    else:
-                        actions = wastarSearch(defendFoodProblem, mazeDistanceHeuristic)
+                    actions = wastarSearch(defendFoodProblem, manhattanHeuristic)
                     print("mode: someone invading")
                     print(self.currentPosition)
                     if len(actions) > 0:
@@ -1608,11 +1603,7 @@ class WaStarDefender(DummyAgent):
             closestFoodProblem = AvoidProblem(gameState, self.currentPosition, opponent=avoid, goal=foodEaten, myzone=self.my_zone)
         else:
             closestFoodProblem = PositionSearchProblem(gameState, self.currentPosition, goal=foodEaten)
-
-        if self.getMazeDistance(foodEaten, self.currentPosition) <= 12:
-            actions = wastarSearch(closestFoodProblem, mazeDistanceHeuristic)
-        else:
-            actions = wastarSearch(closestFoodProblem, manhattanHeuristic)
+        actions = wastarSearch(closestFoodProblem, manhattanHeuristic)
         print("mode: findInvader")
         print(self.currentPosition)
         if len(actions) > 0:
@@ -1682,10 +1673,7 @@ class WaStarDefender(DummyAgent):
         else:
             defendFoodProblem = PositionSearchProblem(gameState, self.currentPosition, goal=target)
 
-        if self.getMazeDistance(target, self.currentPosition) <= 12:
-            actions = wastarSearch(defendFoodProblem, mazeDistanceHeuristic)
-        else:
-            actions = wastarSearch(defendFoodProblem, manhattanHeuristic)
+        actions = wastarSearch(defendFoodProblem, manhattanHeuristic)
         print("mode: hunt")
         print(self.currentPosition)
         self.mode = "hunt"
