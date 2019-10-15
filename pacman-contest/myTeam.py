@@ -1326,14 +1326,23 @@ class WaStarDefender(DummyAgent):
         """
         The func as the agent's turn commences, choose action accordingly based on
         what mode hs is currently in：
-           > As a normal ghost, patrol around by default
-             Actions to perform:
-                > hunt(), if any enemy pacman detected
-                > defend(), if no enemy pacman found
 
-           > As a scared ghost:
-                > suicide and expects re-spawning asap, if scared recently
-                > flee, if scared for some time
+        > As a normal defender, which means not being scared:
+            > If any enemy invader can be observed → hunt mode
+            > else:
+                > If the number of the protected food decreases → search invader mode
+                > else:
+        > If any potential invader can be observed  → track mode
+        > If the defender has just eaten an enemy → steal food mode
+        > else → normal defend mode
+
+        > As a scared defender:
+            > If any enemy invader can be observed:
+                > If the maze distance( initial position, current position) < scared time left
+        → suicide mode
+        > else → flee mode
+            > else:
+                > Perform as a normal defender.
         """
         # update current status
         self.currentPosition = gameState.getAgentPosition(self.index)
@@ -1369,7 +1378,7 @@ class WaStarDefender(DummyAgent):
         """
          Actions a scared ghost may perform.
         :param gameState:
-        :param invaders: a list of invader position if any, or an empty list
+        :param invaders: a list of invader positions
         """
         # Pick nearest enemy
         enemyPosition = sorted(invaders, key=lambda pos: pow(pos[0] - self.currentPosition[0], 2) + pow(
@@ -1381,6 +1390,12 @@ class WaStarDefender(DummyAgent):
             return self.flee(gameState, enemyPosition)
 
     def suicide(self, gameState, enemyPosition):
+        """
+         Actions to chase the pacman in order to be eaten ASAP
+        :param gameState
+        :param enemyPosition: the position of the invader
+        """
+
         print("mode: suicide")
         print(self.currentPosition)
         goHomeProblem = PositionSearchProblem(gameState, self.currentPosition, goal=enemyPosition)
@@ -1392,6 +1407,10 @@ class WaStarDefender(DummyAgent):
             return 'Stop'
 
     def defend(self, gameState):
+        """
+         Actions the defender performs when it is nor scared and no invaders can be detected.
+        :param gameState
+        """
         currentFood = self.getFoodYouAreDefending(gameState).asList()
         if len(self.myFood) > len(currentFood) or self.searching:
             self.searching = True
@@ -1403,8 +1422,7 @@ class WaStarDefender(DummyAgent):
             self.myFood = currentFood
             return self.findInvader(gameState, eatenFoods[0])
         else:
-            # Eat The Scared Pacman If It is Just Beside Uou
-            #
+            # A tricky mode: eat the scared pacman if it is just next to the defender
             for opponent in self.opponentIndices:
                 op = gameState.getAgentPosition(opponent)
                 if op and (not gameState.getAgentState(opponent).isPacman) and gameState.getAgentState(opponent).scaredTimer > 0:
@@ -1418,8 +1436,7 @@ class WaStarDefender(DummyAgent):
                                 return actions[0]
                             else:
                                 return 'Stop'
-            #
-            #
+
             self.myFood = currentFood
             invaders = []
             for opponent in self.potentialInvaders:
@@ -1428,14 +1445,7 @@ class WaStarDefender(DummyAgent):
                     # if the opponent invades
                     if not gameState.getAgentState(opponent).isPacman:
                         invaders.append(gameState.getAgentPosition(opponent))
-            # re = False
-            # ops = []
-            # for opponent in self.opponentIndices:
-            #     # if in observable area
-            #     if gameState.getAgentPosition(opponent) and (not gameState.getAgentState(opponent).isPacman) and \
-            #             gameState.getAgentState(opponent).scaredTimer <= 0:
-            #         ops.append(opponent)
-            #         re = True
+
             if len(invaders) > 0 and (not gameState.getAgentState(self.index).isPacman):
                 return self.track(invaders[0], gameState)
             if self.eatDefender:
@@ -1484,6 +1494,11 @@ class WaStarDefender(DummyAgent):
                 return 'Stop'
 
     def track(self, invader, gameState, other = None):
+        """
+         Actions to track a potential invader
+        :param gameState:
+        :param invader: the position of a potential invader
+        """
         trackProblem = TrackProblem(gameState, self.currentPosition, opponentborder=self.opponentborder, goal=invader, self_border=self.boarder_mid[0], height=self.boardHeight,myZone=self.my_zone, other = other)
         actions = wastarSearch(trackProblem, manhattanHeuristic)
         self.mode = "track"
@@ -1495,11 +1510,12 @@ class WaStarDefender(DummyAgent):
             return 'Stop'
 
     def stealFood(self, gameState):
+        """
+         Actions to eat some food which is relatively near and safe
+        :param gameState:
+        """
         foods = self.getFood(gameState).asList()
         capsules = self.getCapsules(gameState)
-        d = 6
-        d_relax = 10
-        d_relax_c = 15
         temp = []
         absolutely_safe = True
         for opponent in self.opponentIndices:
@@ -1590,6 +1606,11 @@ class WaStarDefender(DummyAgent):
             return self.defend(gameState)
 
     def findInvader(self, gameState, foodEaten):
+        """
+         Actions of searching for the last eaten food
+        :param gameState:
+        :param foodEaten: a position of the last eaten food
+        """
         re = False
         for opponent in self.opponentIndices:
             # if in observable area,
@@ -1614,6 +1635,11 @@ class WaStarDefender(DummyAgent):
             return self.defend(gameState)
 
     def flee(self, gameState, enemyPosition):
+        """
+         Actions to follow the invader at the distance of 2
+        :param gameState
+        :param enemyPosition: the position of the invader detected
+        """
         (x, y) = enemyPosition
         goal = list()
         goal_temp = [(x + 2, y), (x - 2, y), (x + 1, y + 1), (x - 1, y + 1), (x + 1, y - 1), (x - 1, y - 1), (x, y + 2), (x, y - 2)]
@@ -1634,22 +1660,11 @@ class WaStarDefender(DummyAgent):
 
     def hunt(self, gameState, invaders):
         """
-        Actually it is defending food from opponent rather than hunting opponent
-        hunting mode
-        logic 1: Set the pacman's closet food as the goal
-        logic 2: Set the pacman's position as the goal
+         Actions to chase the invader
+        :param gameState
+        :param invaders: the position of the invader detected
         """
 
-        ''' 1
-        foodDefending, distance = self.closestObjectUsingPosition(self.getFoodYouAreDefending(gameState).asList(),
-                                                                  self.opponentPosition)
-        defendFoodProblem = PositionSearchProblem(gameState, gameState.getAgentPosition(self.index), goal=foodDefending)
-        actions = wastarSearch(defendFoodProblem, manhattanHeuristic)
-        if len(actions) > 0:
-            return actions[0]
-        else:
-            return 'Stop'
-        '''
         currentFood = self.getFoodYouAreDefending(gameState).asList()
         self.myFood = currentFood
         # Pick the nearest invader to hunt
@@ -1900,6 +1915,11 @@ class PositionSearchProblem(SearchProblem):
 
 # Consider the opponent pacman and his surrounding area as walls
 class FleeProblem(PositionSearchProblem):
+    """
+    The problem that:
+    1. Consider the opponent and the positions next to it as walls.
+    2. Consider the positions which are 2 steps away from the opponent pacman as goals.
+    """
     def __init__(self, gameState, startState, opponent, costFn=lambda x: 1, goal=(1, 1), start=None, warn=True, visualize=False, goals = None):
         """
         Stores the start and goal.
@@ -1936,13 +1956,7 @@ class FleeProblem(PositionSearchProblem):
 class AvoidProblem(FleeProblem):
     def __init__(self, gameState, startState, opponent, costFn=lambda x: 1, goal=(1, 1), start=None, warn=True,
                  visualize=False, myzone=[]):
-        """
-        Stores the start and goal.
 
-        gameState: A GameState object (pacman.py)
-        costFn: A function from a search state (tuple) to a non-negative number
-        goal: A position in the gameState
-        """
         self.gameState = gameState
         self.walls = gameState.getWalls()
         (x, y) = opponent
@@ -1972,13 +1986,7 @@ class AvoidProblem(FleeProblem):
 class TrackProblem(PositionSearchProblem):
     def __init__(self, gameState, startState, costFn=lambda x: 1, goal=(1, 1), opponentborder = 15, self_border = 16,height = 0,start=None, warn=True,
                  visualize=False, myZone = None, other = None):
-        """
-        Stores the start and goal.
 
-        gameState: A GameState object (pacman.py)
-        costFn: A function from a search state (tuple) to a non-negative number
-        goal: A position in the gameState
-        """
         self.walls = gameState.getWalls()
         for i in range(height):
             self.walls[opponentborder][i] = True
@@ -2012,44 +2020,27 @@ def generalGraphSearch(problem, structure):
     search problem.
     """
 
-    # Push the root node/start into the data structure in this format: [(state, action taken, cost)]
-    # The list pushed into the structure for the second node will look something like this:
-    # [(root_state, "Stop", 0), (new_state, "North", 1)]
     structure.push([(problem.getStartState(), "Stop", 0)])
 
-    # Initialise the list of visited nodes to an empty list
     visited = []
 
-    # While the structure is not empty, i.e. there are still elements to be searched,
     while not structure.isEmpty():
-        # get the path returned by the data structure's .pop() method
         path = structure.pop()
-
-        # The current state is the first element in the last tuple of the path
-        # i.e. [(root_state, "Stop", 0), (new_state, "North", 1)][-1][0] = (new_state, "North", 1)[0] = new_state
         curr_state = path[-1][0]
 
-        # if the current state is the goal state,
         if problem.isGoalState(curr_state):
-            # return the actions to the goal state
-            # which is the second element for each tuple in the path, ignoring the first "Stop"
             return [x[1] for x in path][1:]
 
         # if the current state has not been visited,
         if curr_state not in visited:
-            # mark the current state as visited by appending to the visited list
             visited.append(curr_state)
 
             # for all the successors of the current state,
             for successor in problem.getSuccessors(curr_state):
-                # successor[0] = (state, action, cost)[0] = state
-                # if the successor's state is unvisited,
                 if successor[0] not in visited:
                     # Copy the parent's path
                     successorPath = path[:]
-                    # Set the path of the successor node to the parent's path + the successor node
                     successorPath.append(successor)
-                    # Push the successor's path into the structure
                     structure.push(successorPath)
 
     # If search fails, return False
